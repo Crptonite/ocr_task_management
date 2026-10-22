@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpsPilot: AI back-office workspace
 
-## Getting Started
+One web app that combines three project briefs:
 
-First, run the development server:
+| Module | Brief | Where |
+| --- | --- | --- |
+| **Invoice checking** | Koda (6b): read supplier invoices, compare with POs and existing records, flag mismatches for review | `/invoices` |
+| **Order automation** | Spectra (11): extract purchase/sales orders, validate line items, approve and export for ERP | `/orders` |
+| **Projects & tasks** | EM Services (12h): projects, task board, owners, deadlines, progress | `/projects` |
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+The modules are connected. A flagged invoice or an order that fails validation automatically becomes a task on the
+**Invoice Exceptions** / **Order Exceptions** board. Approving or fixing the record closes that task. Everything is written to a
+shared audit log.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Next.js 16** (App Router, Server Actions, `src/proxy.ts` for auth)
+- **Supabase**: Auth, Postgres (RLS on), Storage (private `documents` bucket), Realtime (task board)
+- **OpenAI** (Responses API + Zod structured outputs) for document extraction and task suggestions
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup
 
-## Learn More
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Push the database (tables, RLS, storage bucket, realtime + demo data) with the Supabase CLI:
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <your-project-ref>
+   npx supabase db push --include-seed
+   ```
+   The schema lives in `supabase/migrations/`, demo data in `supabase/seed.sql`.
+   (Alternative: paste both files into the Supabase SQL editor, migration first.)
+3. For quick demos, turn off **Authentication → Providers → Email → Confirm email**.
+4. Create `.env.local` with the Supabase URL and anon/publishable key (see `.env.example`).
+   - Add `OPENAI_API_KEY` to use real AI extraction (`OPENAI_MODEL` optional, default `gpt-5.4-mini`).
+   - Leave it empty for **demo mode**. Uploads then produce realistic mock extractions built from the seeded POs (sometimes clean, sometimes with a price or quantity mismatch).
+5. `npm install` then `npm run dev`, and open http://localhost:3000.
+6. Sign up. The **first account becomes admin**. Later sign-ups are staff, and you can promote them on `/team`.
 
-To learn more about Next.js, take a look at the following resources:
+## CRUD by module
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| | Create | Read | Update | Delete |
+| --- | --- | --- | --- | --- |
+| Invoices | upload (AI) or enter manually | review queue, compare page | edit fields/lines → re-check vs PO; approve/reject; reopen | reviewer/admin |
+| Orders | upload (AI) or enter manually | tabs by status | edit fields/lines → re-validate; approve; reopen | reviewer/admin |
+| Projects | new project form | cards with progress | name, brief, due date, status | deletes its tasks too |
+| Tasks | add form or AI suggestions | board + filters | drag between columns, title, details, owner, priority, due | from the task card |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Roles
 
-## Deploy on Vercel
+| Role | Can |
+| --- | --- |
+| staff | upload documents, correct extracted orders, manage projects/tasks |
+| reviewer | + approve/reject invoices, approve orders for export |
+| admin | + change roles |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Where the logic lives
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/lib/ai.ts`: OpenAI extraction (invoice, order) and the task planner, plus demo-mode mocks
+- `src/lib/matching.ts`: invoice ↔ PO rules (duplicate, supplier, line not on PO, price drift > 1%, over-billed qty, arithmetic, low confidence)
+- `src/lib/orders.ts`: order validation (missing fields, unknown SKU, price deviation > 10% from catalogue, totals) and CSV export
+- `src/lib/workflow.ts`: audit log, storage helpers, auto-created exception tasks
+- `supabase/migrations/`: tables, RLS, storage bucket, realtime
