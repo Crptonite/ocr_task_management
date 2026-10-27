@@ -42,17 +42,20 @@ export async function requireUser() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, role")
-    .eq("id", user.id)
-    .single<Profile>();
+  const loadProfile = () =>
+    supabase.from("profiles").select("id, full_name, email, role").eq("id", user.id).maybeSingle<Profile>();
 
-  return {
-    supabase,
-    user,
-    profile: profile ?? { id: user.id, full_name: user.email ?? null, email: user.email ?? null, role: "staff" as const },
-  };
+  let { data: profile } = await loadProfile();
+  if (!profile) {
+    // Account created before the schema existed: create its profile so
+    // foreign keys like invoices.uploaded_by are satisfied.
+    const { error } = await supabase.rpc("ensure_profile");
+    if (error) throw new Error(`Your user profile is missing and could not be created: ${error.message}`);
+    ({ data: profile } = await loadProfile());
+    if (!profile) throw new Error("Your user profile is missing. Run the latest Supabase migration.");
+  }
+
+  return { supabase, user, profile };
 }
 
 export function canReview(profile: Profile) {

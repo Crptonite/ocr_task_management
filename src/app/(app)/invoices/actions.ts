@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { canReview, requireUser } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/server";
 import { aiEnabled, extractInvoice, type DemoPo } from "@/lib/ai";
 import { compareInvoice, statusFromFlags, type Flag, type InvoiceForMatch } from "@/lib/matching";
 import {
@@ -243,8 +243,8 @@ export async function saveInvoice(id: string, header: InvoiceHeaderInput, lines:
 }
 
 export async function reviewInvoice(formData: FormData) {
+  // Any signed-in user (staff included) may decide; the audit log records who did.
   const { supabase, profile } = await requireUser();
-  if (!canReview(profile)) throw new Error("Only reviewers and admins can approve or reject invoices.");
 
   const id = String(formData.get("id"));
   const decision = String(formData.get("decision")) as "approved" | "rejected";
@@ -266,7 +266,6 @@ export async function reviewInvoice(formData: FormData) {
 /** Re-opens a decided invoice so it can be corrected and re-checked. */
 export async function reopenInvoice(formData: FormData) {
   const { supabase, profile } = await requireUser();
-  if (!canReview(profile)) throw new Error("Only reviewers and admins can reopen invoices.");
   const id = String(formData.get("id"));
   await supabase
     .from("invoices")
@@ -281,8 +280,8 @@ export async function reopenInvoice(formData: FormData) {
 // Delete
 // ---------------------------------------------------------------------------
 export async function deleteInvoice(formData: FormData) {
+  // Any signed-in user (staff included) may delete; the audit log records who did it.
   const { supabase, profile } = await requireUser();
-  if (!canReview(profile)) throw new Error("Only reviewers and admins can delete invoices.");
   const id = String(formData.get("id"));
 
   const { data: inv } = await supabase.from("invoices").select("invoice_number, file_path").eq("id", id).single();
@@ -294,5 +293,7 @@ export async function deleteInvoice(formData: FormData) {
 
   revalidatePath("/invoices");
   revalidatePath("/");
-  redirect("/invoices");
+  // Return to the list tab the user deleted from (only internal invoice URLs).
+  const back = String(formData.get("back") ?? "");
+  redirect(back.startsWith("/invoices?") ? back : "/invoices");
 }

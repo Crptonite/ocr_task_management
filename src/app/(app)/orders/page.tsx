@@ -57,8 +57,8 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
       <div className="mb-6">
         <Uploader
           folder="orders"
-          title="Upload an order document"
-          hint="Customer PO, sales order or supplier confirmation: PDF or photo, up to 10 MB."
+          title="Upload order documents"
+          hint="Up to 100 at once: customer POs, sales orders or supplier confirmations as PDF or photo, max 10 MB each."
           process={processOrder}
           detailBase="/orders"
         />

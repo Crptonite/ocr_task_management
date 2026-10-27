@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, AlertOctagon, AlertTriangle, Info, CheckCircle2, Pencil, Trash2, RotateCcw } from "lucide-react";
-import { canReview, requireUser } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/server";
 import { signedUrl } from "@/lib/workflow";
 import { findPoLine } from "@/lib/matching";
 import { StatusBadge } from "@/components/ui";
@@ -20,7 +20,7 @@ const severityIcon = {
 export default async function InvoiceDetail({ params, searchParams }: PageProps<"/invoices/[id]">) {
   const { id } = await params;
   const { edit } = await searchParams;
-  const { supabase, profile } = await requireUser();
+  const { supabase } = await requireUser();
 
   const { data: inv } = await supabase
     .from("invoices")
@@ -89,7 +89,7 @@ export default async function InvoiceDetail({ params, searchParams }: PageProps<
               <Pencil className="size-4" /> Edit
             </Link>
           )}
-          {decided && canReview(profile) && (
+          {decided && (
             <form action={reopenInvoice}>
               <input type="hidden" name="id" value={inv.id} />
               <button className="btn-secondary">
@@ -97,17 +97,15 @@ export default async function InvoiceDetail({ params, searchParams }: PageProps<
               </button>
             </form>
           )}
-          {canReview(profile) && (
-            <form action={deleteInvoice}>
-              <input type="hidden" name="id" value={inv.id} />
-              <ConfirmButton
-                message="Delete this invoice, its file and its exception task? This cannot be undone."
-                className="btn-secondary text-red-700"
-              >
-                <Trash2 className="size-4" /> Delete
-              </ConfirmButton>
-            </form>
-          )}
+          <form action={deleteInvoice}>
+            <input type="hidden" name="id" value={inv.id} />
+            <ConfirmButton
+              message="Delete this invoice, its file and its exception task? This cannot be undone."
+              className="btn-secondary text-red-700"
+            >
+              <Trash2 className="size-4" /> Delete
+            </ConfirmButton>
+          </form>
         </div>
       </div>
 
@@ -204,7 +202,7 @@ export default async function InvoiceDetail({ params, searchParams }: PageProps<
                 </p>
                 {inv.review_note && <p className="mt-2 rounded-lg bg-canvas px-3 py-2 text-muted">“{inv.review_note}”</p>}
               </div>
-            ) : canReview(profile) ? (
+            ) : (
               <form action={reviewInvoice} className="space-y-3">
                 <input type="hidden" name="id" value={inv.id} />
                 <textarea name="note" className="input" rows={2} placeholder="Note for the audit trail (optional)" />
@@ -217,8 +215,6 @@ export default async function InvoiceDetail({ params, searchParams }: PageProps<
                   </button>
                 </div>
               </form>
-            ) : (
-              <p className="text-sm text-muted">Only reviewers and admins can approve or reject invoices.</p>
             )}
           </section>
         </div>

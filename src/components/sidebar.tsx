@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FileCheck2,
+  FilePlus2,
   PackageSearch,
   KanbanSquare,
   ClipboardList,
+  Package,
   ScrollText,
   Users,
   LogOut,
@@ -24,6 +26,7 @@ const sections = [
     title: "Workflows",
     items: [
       { href: "/invoices", label: "Invoice checking", icon: FileCheck2 },
+      { href: "/invoices/generator", label: "Invoice generator", icon: FilePlus2 },
       { href: "/orders", label: "Order automation", icon: PackageSearch },
       { href: "/projects", label: "Projects & tasks", icon: KanbanSquare },
     ],
@@ -32,6 +35,7 @@ const sections = [
     title: "Records",
     items: [
       { href: "/purchase-orders", label: "Purchase orders", icon: ClipboardList },
+      { href: "/products", label: "Product catalogue", icon: Package },
       { href: "/audit", label: "Audit log", icon: ScrollText },
       { href: "/team", label: "Team", icon: Users },
     ],
@@ -50,7 +54,12 @@ export function Sidebar({
   signOut: () => Promise<void>;
 }) {
   const pathname = usePathname();
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  // Highlight the most specific matching link (so /invoices/generator doesn't also light up /invoices).
+  const hrefs = sections.flatMap((s) => s.items.map((i) => i.href));
+  const activeHref = hrefs
+    .filter((h) => (h === "/" ? pathname === "/" : pathname === h || pathname.startsWith(`${h}/`)))
+    .sort((a, b) => b.length - a.length)[0];
+  const isActive = (href: string) => href === activeHref;
 
   return (
     <aside className="flex w-full shrink-0 flex-col border-line bg-surface md:sticky md:top-0 md:h-screen md:w-64 md:border-r">

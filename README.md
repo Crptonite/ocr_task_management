@@ -40,7 +40,9 @@ shared audit log.
 
 | | Create | Read | Update | Delete |
 | --- | --- | --- | --- | --- |
-| Invoices | upload (AI) or enter manually | review queue, compare page | edit fields/lines → re-check vs PO; approve/reject; reopen | reviewer/admin |
+| Invoices | upload (AI), enter manually, or build a PDF in the **invoice generator** (`/invoices/generator`) | review queue, compare page | edit fields/lines → re-check vs PO; approve/reject; reopen (any role) | any role (trash icon in list or detail page) |
+| Purchase orders | "New purchase order" form (new suppliers created on the fly) | expandable list with lines | — | trash icon; linked invoices are unlinked, not deleted |
+| Product catalogue (`/products`) | add form (new categories on the fly) | grouped by category, search | inline name, category, price, active | trash icon |
 | Orders | upload (AI) or enter manually | tabs by status | edit fields/lines → re-validate; approve; reopen | reviewer/admin |
 | Projects | new project form | cards with progress | name, brief, due date, status | deletes its tasks too |
 | Tasks | add form or AI suggestions | board + filters | drag between columns, title, details, owner, priority, due | from the task card |
@@ -49,8 +51,8 @@ shared audit log.
 
 | Role | Can |
 | --- | --- |
-| staff | upload documents, correct extracted orders, manage projects/tasks |
-| reviewer | + approve/reject invoices, approve orders for export |
+| staff | upload documents; edit, approve/reject and delete invoices; add/delete POs; correct orders; manage projects/tasks |
+| reviewer | + approve and delete orders |
 | admin | + change roles |
 
 ## Where the logic lives

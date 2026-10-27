@@ -21,7 +21,10 @@ export default async function OrderDetail({ params }: PageProps<"/orders/[id]">)
     .maybeSingle();
   if (!order) notFound();
 
-  const url = await signedUrl(supabase, order.file_path);
+  const [url, { data: catalogue }] = await Promise.all([
+    signedUrl(supabase, order.file_path),
+    supabase.from("products").select("sku, name, category, unit_price").eq("active", true).order("category").order("name"),
+  ]);
   const locked = order.status === "approved" || order.status === "exported";
   const lines = ((order.order_lines ?? []) as {
     line_no: number;
@@ -99,6 +102,7 @@ export default async function OrderDetail({ params }: PageProps<"/orders/[id]">)
             id={order.id}
             locked={locked}
             initialIssues={order.issues ?? []}
+            catalogue={(catalogue ?? []).map((p) => ({ ...p, unit_price: Number(p.unit_price) }))}
             initialHeader={{
               order_type: order.order_type,
               order_number: order.order_number,

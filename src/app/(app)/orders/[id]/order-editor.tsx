@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, PackagePlus, Plus, Trash2, Wand2 } from "lucide-react";
 import { money } from "@/lib/format";
+import { guessCategory, matchByDescription } from "@/lib/orders";
 import { saveOrder } from "../actions";
+import { addProductFromOrder } from "../../products/actions";
 
 type Header = {
   order_type: "purchase" | "sales";
@@ -23,12 +25,14 @@ export function OrderEditor({
   initialHeader,
   initialLines,
   initialIssues,
+  catalogue,
 }: {
   id: string;
   locked: boolean;
   initialHeader: Header;
   initialLines: Line[];
   initialIssues: string[];
+  catalogue: { sku: string; name: string; category: string; unit_price: number }[];
 }) {
   const router = useRouter();
   const [header, setHeader] = useState(initialHeader);
@@ -36,8 +40,50 @@ export function OrderEditor({
   const [issues, setIssues] = useState(initialIssues);
   const [dirty, setDirty] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [adding, setAdding] = useState<string | null>(null);
   const currency = header.currency ?? "SGD";
   const lineTotal = lines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
+
+  const bySku = new Map(catalogue.map((p) => [p.sku.toUpperCase(), p]));
+  const inCatalogue = (l: Line) => Boolean(l.sku?.trim() && bySku.has(l.sku.trim().toUpperCase()));
+  const missing = lines.filter((l) => l.description.trim() && l.sku?.trim() && !inCatalogue(l));
+
+  // Picking a catalogue SKU fills in an empty description and a zero price.
+  function pickSku(i: number, sku: string) {
+    const item = bySku.get(sku.trim().toUpperCase());
+    setLines((ls) =>
+      ls.map((l, idx) =>
+        idx !== i
+          ? l
+          : {
+              ...l,
+              sku,
+              description: item && !l.description.trim() ? item.name : l.description,
+              unit_price: item && !l.unit_price ? item.unit_price : l.unit_price,
+            },
+      ),
+    );
+    setDirty(true);
+  }
+
+  /** Adds lines' SKUs to the catalogue using their description and price, then re-validates. */
+  async function addToCatalogue(toAdd: Line[]) {
+    setAdding(toAdd.map((l) => l.sku).join(","));
+    for (const l of toAdd) {
+      const res = await addProductFromOrder({
+        sku: l.sku ?? "",
+        name: l.description,
+        category: guessCategory(l.description),
+        unit_price: l.unit_price,
+      });
+      if (res.error) {
+        alert(res.error);
+        break;
+      }
+    }
+    setAdding(null);
+    save();
+  }
 
   function setH<K extends keyof Header>(key: K, value: Header[K]) {
     setHeader((h) => ({ ...h, [key]: value }));
@@ -90,6 +136,16 @@ export function OrderEditor({
                   <li key={i}>{i}</li>
                 ))}
               </ul>
+              {!locked && missing.length > 0 && (
+                <button
+                  className="btn-secondary mt-3 py-1.5 text-xs"
+                  disabled={adding !== null || pending}
+                  onClick={() => addToCatalogue(missing)}
+                >
+                  <PackagePlus className="size-3.5" />
+                  {adding ? "Adding…" : `Add ${missing.length} missing SKU(s) to catalogue from their descriptions`}
+                </button>
+              )}
             </div>
           </>
         ) : (
@@ -138,6 +194,13 @@ export function OrderEditor({
           </span>
         </header>
         <div className="overflow-x-auto">
+          <datalist id="catalogue-skus">
+            {catalogue.map((p) => (
+              <option key={p.sku} value={p.sku}>
+                {p.name} · {p.category}
+              </option>
+            ))}
+          </datalist>
           <table className="w-full min-w-[640px]">
             <thead className="border-b border-line bg-canvas/50">
               <tr>
@@ -155,11 +218,30 @@ export function OrderEditor({
                 <tr key={i} className={l.issues.length && !dirty ? "bg-amber-50/50" : ""}>
                   <td className="td text-muted">{i + 1}</td>
                   <td className="px-2 py-2">
-                    <input className="input font-mono text-xs" value={l.sku ?? ""} disabled={locked} onChange={(e) => setL(i, { sku: e.target.value })} />
+                    <input
+                      className="input font-mono text-xs"
+                      list="catalogue-skus"
+                      value={l.sku ?? ""}
+                      disabled={locked}
+                      onChange={(e) => pickSku(i, e.target.value)}
+                    />
                   </td>
                   <td className="px-2 py-2">
                     <input className="input" value={l.description} disabled={locked} onChange={(e) => setL(i, { description: e.target.value })} />
-                    {l.issues.length > 0 && !dirty && <p className="mt-1 text-xs text-amber-700">{l.issues.join(" · ")}</p>}
+                    {(() => {
+                      // Catalogue problems are checked live below, so only show the other server issues here.
+                      const other = l.issues.filter((x) => x !== "SKU not in catalogue" && x !== "Missing SKU");
+                      return other.length > 0 && !dirty && <p className="mt-1 text-xs text-amber-700">{other.join(" · ")}</p>;
+                    })()}
+                    {!locked && l.description.trim() && !inCatalogue(l) && (
+                      <CatalogueHint
+                        line={l}
+                        suggestion={matchByDescription(l.description, catalogue)}
+                        busy={adding !== null}
+                        onUse={(sku) => pickSku(i, sku)}
+                        onAdd={() => addToCatalogue([l])}
+                      />
+                    )}
                   </td>
                   <td className="px-2 py-2">
                     <input className="input text-right" type="number" value={l.quantity} disabled={locked} onChange={(e) => setL(i, { quantity: Number(e.target.value) })} />
@@ -233,5 +315,42 @@ function TextField({
         onChange={(e) => onChange(e.target.value || null)}
       />
     </label>
+  );
+}
+
+function CatalogueHint({
+  line,
+  suggestion,
+  busy,
+  onUse,
+  onAdd,
+}: {
+  line: Line;
+  suggestion: { sku: string; name: string; unit_price: number } | null;
+  busy: boolean;
+  onUse: (sku: string) => void;
+  onAdd: () => void;
+}) {
+  const hasSku = Boolean(line.sku?.trim());
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+      <span className="text-amber-700">{hasSku ? "SKU not in catalogue" : "Missing SKU"}</span>
+      {suggestion && (
+        <button type="button" className="inline-flex items-center gap-1 text-brand-600 hover:underline" onClick={() => onUse(suggestion.sku)}>
+          <Wand2 className="size-3" /> Use {suggestion.sku} ({suggestion.name})
+        </button>
+      )}
+      {hasSku && (
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-brand-600 hover:underline disabled:opacity-50"
+          disabled={busy}
+          onClick={onAdd}
+          title="Creates the product from this line's SKU, description and price"
+        >
+          <PackagePlus className="size-3" /> Add {line.sku?.trim().toUpperCase()} to catalogue
+        </button>
+      )}
+    </div>
   );
 }

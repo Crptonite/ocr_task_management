@@ -3,7 +3,15 @@ import { requireUser } from "@/lib/supabase/server";
 import { Badge, EmptyState, PageHeader, type Tone } from "@/components/ui";
 import { dateTime } from "@/lib/format";
 
-const entityTone: Record<string, Tone> = { invoice: "amber", order: "violet", project: "green", task: "blue", profile: "gray" };
+const entityTone: Record<string, Tone> = {
+  invoice: "amber",
+  order: "violet",
+  project: "green",
+  task: "blue",
+  purchase_order: "red",
+  product: "violet",
+  profile: "gray",
+};
 const entityHref: Record<string, string> = { invoice: "/invoices", order: "/orders", project: "/projects" };
 
 export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
@@ -22,7 +30,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
     <>
       <PageHeader title="Audit log" description="Every upload, AI result, edit and decision, with who did it and when." />
       <div className="mb-4 flex flex-wrap gap-2 text-sm">
-        {["", "invoice", "order", "project", "task", "profile"].map((t) => (
+        {["", "invoice", "order", "purchase_order", "product", "project", "task", "profile"].map((t) => (
           <Link
             key={t}
             href={t ? `/audit?type=${t}` : "/audit"}
@@ -30,7 +38,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
               (type ?? "") === t ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line bg-surface text-muted hover:text-ink"
             }`}
           >
-            {t || "All"}
+            {t.replace("_", " ") || "All"}
           </Link>
         ))}
       </div>

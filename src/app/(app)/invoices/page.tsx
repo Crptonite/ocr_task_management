@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { AlertTriangle, PenLine } from "lucide-react";
+import { AlertTriangle, FilePlus2, PenLine, Trash2 } from "lucide-react";
 import { requireUser } from "@/lib/supabase/server";
 import { Uploader } from "@/components/uploader";
+import { ConfirmButton } from "@/components/confirm-button";
 import { EmptyState, PageHeader, StatusBadge, Tabs } from "@/components/ui";
 import { date, money } from "@/lib/format";
-import { createManualInvoice, processInvoice } from "./actions";
+import { createManualInvoice, deleteInvoice, processInvoice } from "./actions";
 
 const TABS = [
   { key: "queue", label: "Review queue", statuses: ["flagged"] },
@@ -33,19 +34,24 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
         title="Invoice checking"
         description="Upload supplier invoices. AI extracts the details, compares them with the purchase order, and sends mismatches here for review."
         actions={
-          <form action={createManualInvoice}>
-            <button className="btn-secondary">
-              <PenLine className="size-4" /> Enter manually
-            </button>
-          </form>
+          <>
+            <Link href="/invoices/generator" className="btn-secondary">
+              <FilePlus2 className="size-4" /> Generate PDF invoice
+            </Link>
+            <form action={createManualInvoice}>
+              <button className="btn-secondary">
+                <PenLine className="size-4" /> Enter manually
+              </button>
+            </form>
+          </>
         }
       />
 
       <div className="mb-6">
         <Uploader
           folder="invoices"
-          title="Upload a supplier invoice"
-          hint="PDF or photo, up to 10 MB. Drag and drop works too."
+          title="Upload supplier invoices"
+          hint="Up to 100 at once: PDF or photo, max 10 MB each. Drag and drop works too."
           process={processInvoice}
           detailBase="/invoices"
         />
@@ -72,6 +78,7 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
                   <th className="th text-right">Total</th>
                   <th className="th">Issues</th>
                   <th className="th">Status</th>
+                  <th className="th w-12"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -100,6 +107,18 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
                       </td>
                       <td className="td">
                         <StatusBadge status={inv.status} />
+                      </td>
+                      <td className="px-2 py-3 text-right">
+                        <form action={deleteInvoice}>
+                          <input type="hidden" name="id" value={inv.id} />
+                          <input type="hidden" name="back" value={`/invoices?tab=${tab.key}`} />
+                          <ConfirmButton
+                            message={`Delete invoice ${inv.invoice_number ?? "(unnumbered)"} from ${inv.supplier_name ?? "unknown supplier"}? Its file and exception task are removed too. This cannot be undone.`}
+                            className="rounded-md p-1.5 text-muted hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="size-4" aria-label="Delete invoice" />
+                          </ConfirmButton>
+                        </form>
                       </td>
                     </tr>
                   );

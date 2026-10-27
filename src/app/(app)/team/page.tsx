@@ -18,8 +18,8 @@ async function setRole(formData: FormData) {
 
 const roleHelp = {
   admin: "Everything, including managing roles",
-  reviewer: "Approve/reject invoices and approve orders",
-  staff: "Upload documents, fix orders, manage tasks",
+  reviewer: "Everything staff can do, plus approve and delete orders",
+  staff: "Check, approve, reject and delete invoices; manage POs and the product catalogue, fix orders, manage tasks",
 };
 
 export default async function TeamPage() {

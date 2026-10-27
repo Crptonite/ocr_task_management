@@ -1,13 +1,20 @@
+import { Trash2 } from "lucide-react";
 import { requireUser } from "@/lib/supabase/server";
 import { EmptyState, PageHeader, StatusBadge } from "@/components/ui";
+import { ConfirmButton } from "@/components/confirm-button";
 import { date, money } from "@/lib/format";
+import { deletePurchaseOrder } from "./actions";
+import { NewPoForm } from "./new-po-form";
 
 export default async function PurchaseOrdersPage() {
   const { supabase } = await requireUser();
-  const { data: pos } = await supabase
-    .from("purchase_orders")
-    .select("id, po_number, order_date, currency, total, status, suppliers(name), po_lines(id, sku, description, quantity, unit_price), invoices(id, status)")
-    .order("po_number");
+  const [{ data: pos }, { data: suppliers }] = await Promise.all([
+    supabase
+      .from("purchase_orders")
+      .select("id, po_number, order_date, currency, total, status, suppliers(name), po_lines(id, sku, description, quantity, unit_price), invoices(id, status)")
+      .order("po_number"),
+    supabase.from("suppliers").select("name").order("name"),
+  ]);
 
   return (
     <>
@@ -15,46 +22,65 @@ export default async function PurchaseOrdersPage() {
         title="Purchase orders"
         description="Existing records the invoice checker compares against. In production these would sync from the ERP."
       />
+      <div className="mb-6">
+        <NewPoForm suppliers={(suppliers ?? []).map((s) => s.name)} />
+      </div>
       {!pos?.length ? (
         <div className="card">
-          <EmptyState title="No purchase orders">Run supabase/seed.sql to load demo data.</EmptyState>
+          <EmptyState title="No purchase orders">Create one above, or run supabase/seed.sql to load demo data.</EmptyState>
         </div>
       ) : (
         <div className="space-y-4">
-          {pos.map((po) => (
-            <details key={po.id} className="card group">
-              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-4 px-5 py-4">
-                <span className="font-mono text-sm font-medium">{po.po_number}</span>
-                <span className="flex-1 text-sm">{(po.suppliers as unknown as { name: string } | null)?.name}</span>
-                <span className="text-xs text-muted">{date(po.order_date)}</span>
-                <span className="text-xs text-muted">{po.invoices?.length ?? 0} invoice(s)</span>
-                <span className="w-28 text-right text-sm font-medium tabular-nums">{money(po.total, po.currency)}</span>
-                <StatusBadge status={po.status === "open" ? "active" : "done"} />
-              </summary>
-              <table className="w-full border-t border-line">
-                <thead className="bg-canvas/50">
-                  <tr>
-                    <th className="th">SKU</th>
-                    <th className="th">Description</th>
-                    <th className="th text-right">Qty</th>
-                    <th className="th text-right">Unit price</th>
-                    <th className="th text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {po.po_lines.map((l) => (
-                    <tr key={l.id}>
-                      <td className="td font-mono text-xs">{l.sku}</td>
-                      <td className="td">{l.description}</td>
-                      <td className="td text-right tabular-nums">{Number(l.quantity)}</td>
-                      <td className="td text-right tabular-nums">{money(l.unit_price, po.currency)}</td>
-                      <td className="td text-right tabular-nums">{money(Number(l.quantity) * Number(l.unit_price), po.currency)}</td>
+          {pos.map((po) => {
+            const invoiceCount = po.invoices?.length ?? 0;
+            return (
+              <details key={po.id} className="card group">
+                <summary className="flex cursor-pointer list-none flex-wrap items-center gap-4 px-5 py-4">
+                  <span className="font-mono text-sm font-medium">{po.po_number}</span>
+                  <span className="flex-1 text-sm">{(po.suppliers as unknown as { name: string } | null)?.name}</span>
+                  <span className="text-xs text-muted">{date(po.order_date)}</span>
+                  <span className="text-xs text-muted">{invoiceCount} invoice(s)</span>
+                  <span className="w-28 text-right text-sm font-medium tabular-nums">{money(po.total, po.currency)}</span>
+                  <StatusBadge status={po.status === "open" ? "active" : "done"} />
+                  <form action={deletePurchaseOrder}>
+                    <input type="hidden" name="id" value={po.id} />
+                    <ConfirmButton
+                      message={
+                        `Delete ${po.po_number} and its line items?` +
+                        (invoiceCount ? ` ${invoiceCount} invoice(s) will be unlinked from it.` : "") +
+                        " This cannot be undone."
+                      }
+                      className="rounded-md p-1.5 text-muted hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="size-4" aria-label={`Delete ${po.po_number}`} />
+                    </ConfirmButton>
+                  </form>
+                </summary>
+                <table className="w-full border-t border-line">
+                  <thead className="bg-canvas/50">
+                    <tr>
+                      <th className="th">SKU</th>
+                      <th className="th">Description</th>
+                      <th className="th text-right">Qty</th>
+                      <th className="th text-right">Unit price</th>
+                      <th className="th text-right">Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </details>
-          ))}
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {po.po_lines.map((l) => (
+                      <tr key={l.id}>
+                        <td className="td font-mono text-xs">{l.sku}</td>
+                        <td className="td">{l.description}</td>
+                        <td className="td text-right tabular-nums">{Number(l.quantity)}</td>
+                        <td className="td text-right tabular-nums">{money(l.unit_price, po.currency)}</td>
+                        <td className="td text-right tabular-nums">{money(Number(l.quantity) * Number(l.unit_price), po.currency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </details>
+            );
+          })}
         </div>
       )}
     </>

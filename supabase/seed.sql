@@ -11,10 +11,10 @@ on conflict (name) do nothing;
 insert into public.purchase_orders (po_number, supplier_id, order_date, currency, total)
 select v.po_number, s.id, v.order_date::date, 'SGD', v.total
 from (values
-  ('PO-2026-0141', 'Teak & Timber Supplies Pte Ltd', '2026-09-28', 13300.00),
-  ('PO-2026-0142', 'Hafele Hardware Asia', '2026-10-01', 2965.00),
-  ('PO-2026-0143', 'Lumina Fabrics Co', '2026-10-03', 5080.00),
-  ('PO-2026-0144', 'Nordic Foam Industries', '2026-10-06', 3720.00)
+  ('PO-2026-0101', 'Teak & Timber Supplies Pte Ltd', '2026-09-28', 13300.00),
+  ('PO-2026-0102', 'Hafele Hardware Asia', '2026-10-01', 2965.00),
+  ('PO-2026-0103', 'Lumina Fabrics Co', '2026-10-03', 5080.00),
+  ('PO-2026-0104', 'Nordic Foam Industries', '2026-10-06', 3720.00)
 ) as v(po_number, supplier, order_date, total)
 join public.suppliers s on s.name = v.supplier
 on conflict (po_number) do nothing;
@@ -22,31 +22,21 @@ on conflict (po_number) do nothing;
 insert into public.po_lines (po_id, sku, description, quantity, unit_price)
 select po.id, v.sku, v.description, v.quantity, v.unit_price
 from (values
-  ('PO-2026-0141', 'TK-PLK-2440', 'Teak plank 2440 x 200 x 25mm', 200, 48.50),
-  ('PO-2026-0141', 'OK-PLK-2440', 'White oak plank 2440 x 200 x 25mm', 100, 36.00),
-  ('PO-2026-0142', 'HF-HNG-110', 'Soft-close concealed hinge 110°', 500, 3.20),
-  ('PO-2026-0142', 'HF-SLD-450', 'Full-extension drawer slide 450mm', 150, 8.50),
-  ('PO-2026-0142', 'HF-KNB-032', 'Brushed brass cabinet knob 32mm', 200, 0.45),
-  ('PO-2026-0143', 'LF-BOU-140', 'Bouclé upholstery fabric, ivory (m)', 120, 28.00),
-  ('PO-2026-0143', 'LF-LIN-140', 'Washed linen fabric, sage (m)', 80, 21.50),
-  ('PO-2026-0144', 'NF-HD-50', 'High-density foam sheet 50mm', 60, 42.00),
-  ('PO-2026-0144', 'NF-MEM-25', 'Memory foam topper sheet 25mm', 40, 30.00)
+  ('PO-2026-0101', 'TK-PLK-2440', 'Teak plank 2440 x 200 x 25mm', 200, 48.50),
+  ('PO-2026-0101', 'OK-PLK-2440', 'White oak plank 2440 x 200 x 25mm', 100, 36.00),
+  ('PO-2026-0102', 'HF-HNG-110', 'Soft-close concealed hinge 110°', 500, 3.20),
+  ('PO-2026-0102', 'HF-SLD-450', 'Full-extension drawer slide 450mm', 150, 8.50),
+  ('PO-2026-0102', 'HF-KNB-032', 'Brushed brass cabinet knob 32mm', 200, 0.45),
+  ('PO-2026-0103', 'LF-BOU-140', 'Bouclé upholstery fabric, ivory (m)', 120, 28.00),
+  ('PO-2026-0103', 'LF-LIN-140', 'Washed linen fabric, sage (m)', 80, 21.50),
+  ('PO-2026-0104', 'NF-HD-50', 'High-density foam sheet 50mm', 60, 42.00),
+  ('PO-2026-0104', 'NF-MEM-25', 'Memory foam topper sheet 25mm', 40, 30.00)
 ) as v(po_number, sku, description, quantity, unit_price)
 join public.purchase_orders po on po.po_number = v.po_number
 where not exists (select 1 from public.po_lines l where l.po_id = po.id);
 
-insert into public.products (sku, name, unit_price) values
-  ('SOFA-AURA-3S', 'Aura 3-seater sofa, bouclé ivory', 1890.00),
-  ('SOFA-AURA-2S', 'Aura 2-seater sofa, bouclé ivory', 1490.00),
-  ('TBL-OAK-180', 'Oslo oak dining table 180cm', 1250.00),
-  ('TBL-TEAK-220', 'Bali teak dining table 220cm', 2180.00),
-  ('CHR-OAK-DIN', 'Oslo oak dining chair', 240.00),
-  ('CAB-TEAK-SB', 'Bali teak sideboard 160cm', 1640.00),
-  ('BED-OAK-Q', 'Nord oak bed frame, queen', 1380.00),
-  ('DSK-OAK-140', 'Studio oak desk 140cm', 890.00),
-  ('SHL-OAK-5T', 'Studio oak bookshelf, 5 tier', 560.00),
-  ('OTT-LIN-SG', 'Linen ottoman, sage', 320.00)
-on conflict (sku) do nothing;
+-- The product catalogue (with categories) is loaded by
+-- migrations/20261024000000_product_categories.sql.
 
 insert into public.projects (name, description, status, due_date)
 select * from (values

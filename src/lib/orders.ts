@@ -62,6 +62,54 @@ export function validateOrder(
   return { issues, lineIssues, status: issues.length ? ("needs_attention" as const) : ("ready" as const) };
 }
 
+const STOP_WORDS = new Set(["the", "and", "with", "for", "of", "in", "x", "cm", "mm", "m", "pcs", "pc", "set", "unit"]);
+const tokens = (s: string) =>
+  new Set(
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(" ")
+      .filter((w) => w.length > 1 && !STOP_WORDS.has(w)),
+  );
+
+/**
+ * Finds the catalogue product whose name best matches a line description,
+ * e.g. "Queen size oak bed frame (Nord)" -> "Nord oak bed frame, queen".
+ */
+export function matchByDescription<T extends CatalogItem>(description: string, catalogue: T[]): T | null {
+  const want = tokens(description);
+  if (want.size === 0) return null;
+  let best: { item: T; score: number } | null = null;
+  for (const item of catalogue) {
+    const have = tokens(item.name);
+    let overlap = 0;
+    for (const w of want) if (have.has(w)) overlap++;
+    const score = overlap / Math.max(have.size, want.size);
+    if (overlap >= 2 && score >= 0.4 && (!best || score > best.score)) best = { item, score };
+  }
+  return best?.item ?? null;
+}
+
+const CATEGORY_KEYWORDS: [string, string[]][] = [
+  ["Mattresses", ["mattress", "topper"]],
+  ["Bed frames", ["bed", "headboard", "bedframe"]],
+  ["Sofas", ["sofa", "couch", "armchair", "sectional", "loveseat"]],
+  ["Chairs", ["chair", "stool"]],
+  ["Desks", ["desk"]],
+  ["Tables", ["table"]],
+  ["Shelving & storage", ["shelf", "shelves", "bookshelf", "bookcase", "cabinet", "sideboard", "wardrobe", "drawer", "drawers", "console", "storage"]],
+  ["Ottomans & benches", ["ottoman", "bench", "pouf"]],
+  ["Outdoor", ["outdoor", "lounger", "patio"]],
+  ["Lighting & decor", ["lamp", "light", "rug", "mirror", "cushion"]],
+];
+
+/** Best-guess category for a new product, from words in its description. */
+export function guessCategory(description: string) {
+  const words = tokens(description);
+  for (const [category, keys] of CATEGORY_KEYWORDS) if (keys.some((k) => words.has(k))) return category;
+  return "Other";
+}
+
 const csvCell = (v: unknown) => {
   const s = v == null ? "" : String(v);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
