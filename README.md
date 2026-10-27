@@ -1,62 +1,48 @@
-# OpsPilot: AI back-office workspace
+# Koda Invoice Check
 
-One web app that combines three project briefs:
+AI-assisted invoice checking for **Koda Ltd** (Problem Statement 6b, SCCCI × NYP AI Innovation Challenge, IT2134).
 
-| Module | Brief | Where |
+Staff upload a supplier invoice → the system extracts the fields → matches them against the purchase order → flags price, quantity, tax and duplicate issues → staff approve and export for Dynamics.
+
+## Team
+
+| Member | Role | Owns |
 | --- | --- | --- |
-| **Invoice checking** | Koda (6b): read supplier invoices, compare with POs and existing records, flag mismatches for review | `/invoices` |
-| **Order automation** | Spectra (11): extract purchase/sales orders, validate line items, approve and export for ERP | `/orders` |
-| **Projects & tasks** | EM Services (12h): projects, task board, owners, deadlines, progress | `/projects` |
+| Aeric (lead) | Backend & architecture | `backend/app/` (API, matching, data) |
+| Qizhi | Frontend | `frontend/` |
+| Lucas | OCR & AI | `backend/app/ai/` |
+| Wesley | Testing & QA | `backend/tests/`, `.github/workflows/` |
 
-The modules are connected. A flagged invoice or an order that fails validation automatically becomes a task on the
-**Invoice Exceptions** / **Order Exceptions** board. Approving or fixing the record closes that task. Everything is written to a
-shared audit log.
+## Project structure
 
-## Stack
+```
+backend/
+  app/
+    main.py            FastAPI app + serves the frontend
+    services/          matching engine (invoice vs PO)
+    ai/                extraction pipeline (OCR / LLM)
+    data/              mock ERP data (POs, invoices)
+  tests/               pytest
+frontend/              static HTML / CSS / JS (light + dark mode)
+docs/                  architecture, meeting notes, client Q&A
+legacy/opspilot/       earlier Next.js prototype, kept for reference
+```
 
-- **Next.js 16** (App Router, Server Actions, `src/proxy.ts` for auth)
-- **Supabase**: Auth, Postgres (RLS on), Storage (private `documents` bucket), Realtime (task board)
-- **OpenAI** (Responses API + Zod structured outputs) for document extraction and task suggestions
+## Run it
 
-## Setup
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate        # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
 
-1. Create a free project at [supabase.com](https://supabase.com).
-2. Push the database (tables, RLS, storage bucket, realtime + demo data) with the Supabase CLI:
-   ```bash
-   npx supabase login
-   npx supabase link --project-ref <your-project-ref>
-   npx supabase db push --include-seed
-   ```
-   The schema lives in `supabase/migrations/`, demo data in `supabase/seed.sql`.
-   (Alternative: paste both files into the Supabase SQL editor, migration first.)
-3. For quick demos, turn off **Authentication → Providers → Email → Confirm email**.
-4. Create `.env.local` with the Supabase URL and anon/publishable key (see `.env.example`).
-   - Add `OPENAI_API_KEY` to use real AI extraction (`OPENAI_MODEL` optional, default `gpt-5.4-mini`).
-   - Leave it empty for **demo mode**. Uploads then produce realistic mock extractions built from the seeded POs (sometimes clean, sometimes with a price or quantity mismatch).
-5. `npm install` then `npm run dev`, and open http://localhost:3000.
-6. Sign up. The **first account becomes admin**. Later sign-ups are staff, and you can promote them on `/team`.
+Open http://localhost:8000 (frontend) or http://localhost:8000/docs (API docs).
 
-## CRUD by module
+Run tests: `cd backend && pytest`
 
-| | Create | Read | Update | Delete |
-| --- | --- | --- | --- | --- |
-| Invoices | upload (AI) or enter manually | review queue, compare page | edit fields/lines → re-check vs PO; approve/reject; reopen | reviewer/admin |
-| Orders | upload (AI) or enter manually | tabs by status | edit fields/lines → re-validate; approve; reopen | reviewer/admin |
-| Projects | new project form | cards with progress | name, brief, due date, status | deletes its tasks too |
-| Tasks | add form or AI suggestions | board + filters | drag between columns, title, details, owner, priority, due | from the task card |
+## Workflow
 
-## Roles
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branches, commits and pull requests.
 
-| Role | Can |
-| --- | --- |
-| staff | upload documents, correct extracted orders, manage projects/tasks |
-| reviewer | + approve/reject invoices, approve orders for export |
-| admin | + change roles |
-
-## Where the logic lives
-
-- `src/lib/ai.ts`: OpenAI extraction (invoice, order) and the task planner, plus demo-mode mocks
-- `src/lib/matching.ts`: invoice ↔ PO rules (duplicate, supplier, line not on PO, price drift > 1%, over-billed qty, arithmetic, low confidence)
-- `src/lib/orders.ts`: order validation (missing fields, unknown SKU, price deviation > 10% from catalogue, totals) and CSV export
-- `src/lib/workflow.ts`: audit log, storage helpers, auto-created exception tasks
-- `supabase/migrations/`: tables, RLS, storage bucket, realtime

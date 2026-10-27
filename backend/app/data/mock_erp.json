@@ -1,0 +1,71 @@
+{
+  "purchase_orders": [
+    {
+      "po_number": "PO-2026-0412",
+      "supplier": "Binh Duong Timber Co.",
+      "currency": "USD",
+      "lines": [
+        { "sku": "OAK-PNL-18", "description": "Oak veneer panel 18mm", "qty": 200, "unit_price": 24.5 },
+        { "sku": "HNG-SS-35", "description": "Stainless hinge 35mm", "qty": 800, "unit_price": 0.85 }
+      ]
+    },
+    {
+      "po_number": "PO-2026-0418",
+      "supplier": "Saigon Fabric Mills",
+      "currency": "USD",
+      "lines": [
+        { "sku": "FAB-LIN-GR", "description": "Linen upholstery, grey (m)", "qty": 350, "unit_price": 6.2 }
+      ]
+    },
+    {
+      "po_number": "PO-2026-0421",
+      "supplier": "Jurong Hardware Supplies",
+      "currency": "SGD",
+      "lines": [
+        { "sku": "SCR-WD-40", "description": "Wood screw 4x40 (box)", "qty": 120, "unit_price": 7.8 },
+        { "sku": "GLU-PVA-5L", "description": "PVA wood glue 5L", "qty": 40, "unit_price": 18.0 }
+      ]
+    }
+  ],
+  "invoices": [
+    {
+      "invoice_number": "INV-88213",
+      "po_number": "PO-2026-0412",
+      "supplier": "Binh Duong Timber Co.",
+      "invoice_date": "2026-10-20",
+      "currency": "USD",
+      "tax_rate": 0.0,
+      "tax_amount": 0.0,
+      "lines": [
+        { "sku": "OAK-PNL-18", "description": "Oak veneer panel 18mm", "qty": 200, "unit_price": 24.5 },
+        { "sku": "HNG-SS-35", "description": "Stainless hinge 35mm", "qty": 800, "unit_price": 0.85 }
+      ]
+    },
+    {
+      "invoice_number": "SFM-10477",
+      "po_number": "PO-2026-0418",
+      "supplier": "Saigon Fabric Mills",
+      "invoice_date": "2026-10-22",
+      "currency": "USD",
+      "tax_rate": 0.0,
+      "tax_amount": 0.0,
+      "lines": [
+        { "sku": "FAB-LIN-GR", "description": "Linen upholstery, grey (m)", "qty": 380, "unit_price": 6.45 }
+      ]
+    },
+    {
+      "invoice_number": "JHS-2291",
+      "po_number": "PO-2026-0421",
+      "supplier": "Jurong Hardware Supplies",
+      "invoice_date": "2026-10-24",
+      "currency": "SGD",
+      "tax_rate": 0.09,
+      "tax_amount": 120.0,
+      "lines": [
+        { "sku": "SCR-WD-40", "description": "Wood screw 4x40 (box)", "qty": 120, "unit_price": 7.8 },
+        { "sku": "GLU-PVA-5L", "description": "PVA wood glue 5L", "qty": 40, "unit_price": 18.0 }
+      ]
+    }
+  ]
+}
+
