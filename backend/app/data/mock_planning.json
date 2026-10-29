@@ -1,0 +1,36 @@
+{
+  "products": {
+    "KODA-DESK-120": {
+      "name": "Birch desk 120cm",
+      "bom": { "BIR-PNL-18": 4, "DRW-SL-45": 4, "FIX-CAM-15": 1, "LAC-WB-5L": 0.5 }
+    },
+    "KODA-CAB-2D": {
+      "name": "Two-door birch cabinet",
+      "bom": { "BIR-PNL-18": 6, "DRW-SL-45": 4, "FIX-CAM-15": 1, "LAC-WB-5L": 0.5 }
+    },
+    "KODA-CHAIR-LN": {
+      "name": "Canvas dining chair",
+      "bom": { "FAB-CTN-NV": 2.5, "BIR-PNL-18": 1, "FIX-CAM-15": 0.25, "LAC-WB-5L": 0.1 }
+    }
+  },
+  "materials": {
+    "BIR-PNL-18": { "name": "Birch plywood panel 18mm", "on_hand": 180, "unit": "pc" },
+    "DRW-SL-45": { "name": "Soft-close drawer slide 45cm", "on_hand": 600, "unit": "pc" },
+    "FAB-CTN-NV": { "name": "Cotton canvas, navy", "on_hand": 120, "unit": "m" },
+    "FIX-CAM-15": { "name": "Cam lock fixing (pack)", "on_hand": 90, "unit": "pack" },
+    "LAC-WB-5L": { "name": "Water-based lacquer 5L", "on_hand": 25, "unit": "tin" }
+  },
+  "inbound": [
+    { "po_number": "PO-2026-0412", "sku": "BIR-PNL-18", "qty": 200, "eta": "2026-11-05" },
+    { "po_number": "PO-2026-0412", "sku": "DRW-SL-45", "qty": 800, "eta": "2026-11-05" },
+    { "po_number": "PO-2026-0418", "sku": "FAB-CTN-NV", "qty": 350, "eta": "2026-11-12" },
+    { "po_number": "PO-2026-0421", "sku": "FIX-CAM-15", "qty": 120, "eta": "2026-11-03" },
+    { "po_number": "PO-2026-0421", "sku": "LAC-WB-5L", "qty": 40, "eta": "2026-11-03" }
+  ],
+  "demand": [
+    { "order_number": "SO-K-1001", "customer": "Harbourfront Hotel", "product": "KODA-DESK-120", "quantity": 30, "due_date": "2026-11-02" },
+    { "order_number": "SO-K-1002", "customer": "Marina Suites", "product": "KODA-CHAIR-LN", "quantity": 40, "due_date": "2026-11-08" },
+    { "order_number": "SO-K-1003", "customer": "NUS Hostel", "product": "KODA-CAB-2D", "quantity": 25, "due_date": "2026-11-10" },
+    { "order_number": "SO-K-1004", "customer": "Sentosa Resort", "product": "KODA-CHAIR-LN", "quantity": 80, "due_date": "2026-11-09" }
+  ]
+}

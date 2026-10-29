@@ -8,7 +8,7 @@ from app.main import app
 from app.services.invoice_pdf import invoice_from_po, render_invoice_pdf
 
 client = TestClient(app)
-SGD_PO = "PO-2026-0421"  # Jurong Hardware, charges GST
+SGD_PO = "PO-2026-0421"  # Tuas Fasteners, charges GST
 USD_PO = "PO-2026-0412"
 
 
@@ -50,8 +50,8 @@ def test_pdf_download():
     "variant,status,flag",
     [
         ("clean", "matched", None),
-        ("price", "review", "unit price +5.0% vs PO"),
-        ("qty", "mismatch", "billed 132, PO only 120"),
+        ("price", "review", "unit price +5.1% vs PO"),  # 6.50 * 1.05 rounds to 6.83
+        ("qty", "mismatch", "billed 165, PO only 150"),
         ("tax", "mismatch", "Tax should be"),
     ],
 )
@@ -76,3 +76,31 @@ def test_non_pdf_stays_a_draft():
     body = client.post("/api/invoices/upload", files={"file": ("scan.png", b"\x89PNG....", "image/png")}).json()
     assert body["invoice"] is None
     assert body["draft"]["confidence"] == 0.0
+
+
+def test_product_list_feeds_the_dropdown():
+    skus = {p["sku"] for p in client.get("/api/products").json()}
+    assert {"BIR-PNL-18", "FIX-CAM-15"} <= skus
+
+
+def test_product_invoice_pdf_uses_chosen_product_and_quantity():
+    res = client.get("/api/products/FIX-CAM-15/invoice.pdf", params={"quantity": 10})
+    assert res.status_code == 200 and res.headers["content-type"] == "application/pdf"
+    draft = extract_invoice("p.pdf", res.content)
+    assert [(l["sku"], l["qty"]) for l in draft["lines"]] == [("FIX-CAM-15", 10)]
+    assert draft["supplier"] == "Tuas Fasteners & Finishes" and draft["confidence"] == 1.0
+
+
+def test_product_invoice_uploads_and_matches():
+    pdf = client.get("/api/products/FIX-CAM-15/invoice.pdf", params={"quantity": 10}).content
+    body = client.post("/api/invoices/upload", files={"file": ("i.pdf", pdf, "application/pdf")}).json()
+    assert body["invoice"]["match"]["status"] == "matched"
+    over = client.get("/api/products/FIX-CAM-15/invoice.pdf", params={"quantity": 999}).content
+    flagged = client.post("/api/invoices/upload", files={"file": ("i.pdf", over, "application/pdf")}).json()
+    assert flagged["invoice"]["match"]["status"] == "mismatch"
+
+
+def test_product_invoice_rejects_bad_input():
+    assert client.get("/api/products/NOPE/invoice.pdf").status_code == 404
+    assert client.get("/api/products/FIX-CAM-15/invoice.pdf", params={"quantity": 0}).status_code == 422
+    assert client.get("/api/products/FIX-CAM-15/invoice.pdf", params={"variant": "bogus"}).status_code == 422

@@ -85,3 +85,12 @@ def test_cannot_approve_order_with_issues():
 
 def test_unknown_order_404():
     assert client.get("/api/orders/nope").status_code == 404
+
+
+def test_delete_order():
+    first = client.get("/api/orders").json()[0]["id"]
+    before = len(client.get("/api/orders").json())
+    assert client.delete(f"/api/orders/{first}").status_code == 204
+    assert len(client.get("/api/orders").json()) == before - 1
+    assert client.get(f"/api/orders/{first}").status_code == 404
+    assert client.delete(f"/api/orders/{first}").status_code == 404

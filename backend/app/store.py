@@ -16,6 +16,7 @@ def _load(name: str) -> dict:
 erp: dict = {}
 orders: dict = {}
 projects: dict = {}
+planning: dict = {}
 
 
 def reset() -> None:
@@ -28,6 +29,8 @@ def reset() -> None:
         order.setdefault("id", f"ord-{i}")
     projects.clear()
     projects.update(_load("mock_projects.json"))
+    planning.clear()
+    planning.update(_load("mock_planning.json"))
 
 
 def next_id(prefix: str, items: list[dict]) -> str:

@@ -4,7 +4,7 @@ from fastapi.responses import Response
 
 from app import store
 from app.ai.extractor import extract_order
-from app.services.orders import orders_to_csv, validate_order
+from app.services.orders import koda_entry, orders_to_csv, validate_order
 
 router = APIRouter(prefix="/api", tags=["orders (Spectra)"])
 
@@ -50,6 +50,11 @@ def get_order(order_id: str):
     return with_validation(find_order(order_id))
 
 
+@router.get("/orders/{order_id}/koda-entry")
+def get_koda_entry(order_id: str):
+    return koda_entry(find_order(order_id), store.orders["catalog"])
+
+
 @router.post("/orders/{order_id}/approve")
 def approve_order(order_id: str):
     order = find_order(order_id)
@@ -62,7 +67,13 @@ def approve_order(order_id: str):
     return with_validation(order)
 
 
+@router.delete("/orders/{order_id}", status_code=204)
+def delete_order(order_id: str):
+    store.orders["orders"].remove(find_order(order_id))
+
+
 @router.post("/orders/upload")
 async def upload_order(file: UploadFile = File(...)):
     content = await file.read()
-    return {"draft": extract_order(file.filename or "upload", content)}
+    draft = extract_order(file.filename or "upload", content)
+    return {"draft": draft, "validation": validate_order(draft, store.orders["catalog"])}

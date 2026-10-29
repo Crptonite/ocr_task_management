@@ -59,6 +59,46 @@ def generate_invoice_pdf(po_number: str, variant: str = "clean"):
     )
 
 
+def find_product(sku: str) -> tuple[dict, dict] | None:
+    """(purchase order, line) for the first PO that lists this SKU."""
+    for po in store.erp["purchase_orders"]:
+        for line in po["lines"]:
+            if line["sku"] == sku:
+                return po, line
+    return None
+
+
+@router.get("/products")
+def list_products():
+    """Every product on a purchase order, for the invoice product dropdown."""
+    return [
+        {"sku": line["sku"], "description": line["description"], "unit_price": line["unit_price"],
+         "ordered_qty": line["qty"], "supplier": po["supplier"], "currency": po["currency"], "po_number": po["po_number"]}
+        for po in store.erp["purchase_orders"] for line in po["lines"]
+    ]
+
+
+@router.get("/products/{sku}/invoice.pdf")
+def generate_product_invoice_pdf(sku: str, quantity: int | None = None, variant: str = "clean"):
+    """Invoice PDF for one chosen product. Quantity defaults to what the PO ordered."""
+    found = find_product(sku)
+    if found is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if variant not in VARIANTS:
+        raise HTTPException(status_code=422, detail=f"variant must be one of {', '.join(VARIANTS)}")
+    if quantity is not None and quantity < 1:
+        raise HTTPException(status_code=422, detail="quantity must be at least 1")
+    po, line = found
+    single = {**po, "lines": [{**line, "qty": quantity or line["qty"]}]}
+    inv = invoice_from_po(single, variant)
+    inv["invoice_number"] += f"-{sku}"  # distinct from the whole-PO invoice, so it is not flagged as a duplicate
+    return Response(
+        render_invoice_pdf(inv),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{inv["invoice_number"]}.pdf"'},
+    )
+
+
 INVOICE_FIELDS = ("invoice_number", "po_number", "supplier", "invoice_date", "currency", "tax_rate", "tax_amount", "lines", "source_file")
 
 
@@ -71,3 +111,23 @@ async def upload_invoice(file: UploadFile = File(...)):
         return {"draft": draft, "invoice": None}
     store.erp["invoices"].append({k: draft[k] for k in INVOICE_FIELDS})
     return {"draft": draft, "invoice": list_invoices()[-1]}
+
+
+@router.delete("/invoices/{invoice_number}", status_code=204)
+def delete_invoice(invoice_number: str):
+    invoices = store.erp["invoices"]
+    match = next((i for i in invoices if i["invoice_number"] == invoice_number), None)
+    if match is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    invoices.remove(match)
+
+
+@router.delete("/purchase-orders/{po_number}", status_code=204)
+def delete_purchase_order(po_number: str):
+    po = find_po(po_number)
+    if po is None:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    billed = [i["invoice_number"] for i in store.erp["invoices"] if i["po_number"] == po_number]
+    if billed:
+        raise HTTPException(status_code=409, detail=f"Delete invoice {', '.join(billed)} first")
+    store.erp["purchase_orders"].remove(po)

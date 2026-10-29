@@ -60,7 +60,39 @@ def validate_order(order: dict, catalog: list[dict]) -> dict:
     }
 
 
-EXPORT_COLUMNS = ["order_number", "type", "counterparty", "order_date", "delivery_date",
+def koda_entry(order: dict, catalog: list[dict]) -> dict:
+    """Normalised sales-order record for keying into Koda's system.
+
+    `ready` is only true when validation passes, so a half-read PO is never entered by accident.
+    """
+    validation = validate_order(order, catalog)
+    names = {item["sku"].upper(): item["name"] for item in catalog}
+    return {
+        "ready": validation["status"] == "ready",
+        "issues": validation["issues"],
+        "record": {
+            "customer": (order.get("counterparty") or "").strip(),
+            "customer_po": order.get("order_number"),
+            "order_date": order.get("order_date"),
+            "requested_delivery_date": order.get("delivery_date"),
+            "currency": order.get("currency"),
+            "lines": [
+                {
+                    "line_no": i,
+                    "item_no": (line.get("sku") or "").upper(),
+                    "item_name": names.get((line.get("sku") or "").upper(), line.get("description")),
+                    "quantity": line["quantity"],
+                    "unit_price": line["unit_price"],
+                    "line_amount": line["amount"],
+                }
+                for i, line in enumerate(order.get("lines", []), start=1)
+            ],
+            "total": validation["line_total"],
+        },
+    }
+
+
+EXPORT_COLUMNS =["order_number", "type", "counterparty", "order_date", "delivery_date",
                   "currency", "line_no", "sku", "description", "quantity", "unit_price", "amount"]
 
 

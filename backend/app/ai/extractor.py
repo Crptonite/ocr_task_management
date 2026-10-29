@@ -7,6 +7,7 @@ same so the matching engine and frontend keep working.
 """
 import io
 import re
+from datetime import datetime
 
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
@@ -86,12 +87,58 @@ def extract_invoice(filename: str, content: bytes) -> dict:
     }
 
 
+ORDER_FIELD_PATTERNS = {
+    "order_number": r"(?:Purchase\s*Order|PO|Order)\s*(?:No\.?|Number|#)\s*:?\s*([A-Z0-9][A-Z0-9-]+)",
+    "order_date": r"Order\s*Date\s*:?\s*([^\n]+)",
+    "delivery_date": r"(?:Delivery|Required|Due)\s*(?:Date|By)\s*:?\s*([^\n]+)",
+    "currency": r"Currency\s*:?\s*([A-Z]{3})\b",
+}
+TOTAL_PATTERN = re.compile(r"^(?:Grand\s*)?Total\s*(?:\([A-Z]{3}\))?\s*:?\s*([\d,]+\.\d{2})$", re.IGNORECASE | re.MULTILINE)
+DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d %b %Y", "%d %B %Y")
+ORDER_REQUIRED = ("order_number", "counterparty", "order_date", "delivery_date", "lines")
+
+
+def normalize_date(raw: str | None) -> str | None:
+    """Return an ISO date, or None when the text is not a date we recognise."""
+    if not raw:
+        return None
+    for fmt in DATE_FORMATS:
+        try:
+            return datetime.strptime(raw.strip(), fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+def parse_order_text(text: str) -> dict:
+    fields: dict = {}
+    for key, pattern in ORDER_FIELD_PATTERNS.items():
+        m = re.search(pattern, text, re.IGNORECASE)
+        fields[key] = m.group(1).strip() if m else None
+    fields["order_date"] = normalize_date(fields["order_date"])
+    fields["delivery_date"] = normalize_date(fields["delivery_date"])
+
+    rows = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    fields["counterparty"] = rows[0] if rows else None  # the customer's letterhead is the first line
+
+    fields["lines"] = []
+    for row in rows:
+        m = LINE_PATTERN.match(row)
+        if m:
+            sku, desc, qty, unit, amount = m.groups()
+            fields["lines"].append(
+                {"sku": sku, "description": desc, "quantity": int(qty), "unit_price": _num(unit), "amount": _num(amount)}
+            )
+    total = TOTAL_PATTERN.search(text)
+    fields["total"] = _num(total.group(1)) if total else None
+    return fields
+
+
 def extract_order(filename: str, content: bytes) -> dict:
-    # Placeholder for Spectra purchase / sales orders. Same pipeline as invoices,
-    # different target schema (see app.services.orders.validate_order).
-    return {
+    """Customer PO -> the order schema used by app.services.orders.validate_order."""
+    draft = {
         "order_number": None,
-        "type": None,
+        "type": "sales",  # a customer PO is a sales order from Koda's side
         "counterparty": None,
         "order_date": None,
         "delivery_date": None,
@@ -100,7 +147,18 @@ def extract_order(filename: str, content: bytes) -> dict:
         "lines": [],
         "source_file": filename,
         "size_bytes": len(content),
-        "confidence": 0.0,
-        "note": "Extraction not implemented yet",
+    }
+    text = pdf_text(content) if content.startswith(b"%PDF") else None
+    if not text or not text.strip():
+        return {**draft, "confidence": 0.0, "missing": list(ORDER_REQUIRED),
+                "note": "No text layer found (scan or image). OCR not implemented yet."}
+
+    draft.update(parse_order_text(text))
+    missing = [k for k in ORDER_REQUIRED if not draft[k]]
+    return {
+        **draft,
+        "confidence": round((len(ORDER_REQUIRED) - len(missing)) / len(ORDER_REQUIRED), 2),
+        "missing": missing,
+        "note": "Read from PDF text layer" + (f"; missing {', '.join(missing)}" if missing else ""),
     }
 

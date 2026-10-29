@@ -2,70 +2,69 @@
   "purchase_orders": [
     {
       "po_number": "PO-2026-0412",
-      "supplier": "Binh Duong Timber Co.",
+      "supplier": "Hanoi Hardwood Exports",
       "currency": "USD",
       "lines": [
-        { "sku": "OAK-PNL-18", "description": "Oak veneer panel 18mm", "qty": 200, "unit_price": 24.5 },
-        { "sku": "HNG-SS-35", "description": "Stainless hinge 35mm", "qty": 800, "unit_price": 0.85 }
+        { "sku": "BIR-PNL-18", "description": "Birch plywood panel 18mm", "qty": 220, "unit_price": 21.9 },
+        { "sku": "DRW-SL-45", "description": "Soft-close drawer slide 45cm", "qty": 600, "unit_price": 2.35 }
       ]
     },
     {
       "po_number": "PO-2026-0418",
-      "supplier": "Saigon Fabric Mills",
+      "supplier": "Danang Textile Works",
       "currency": "USD",
       "lines": [
-        { "sku": "FAB-LIN-GR", "description": "Linen upholstery, grey (m)", "qty": 350, "unit_price": 6.2 }
+        { "sku": "FAB-CTN-NV", "description": "Cotton canvas, navy (m)", "qty": 400, "unit_price": 5.4 }
       ]
     },
     {
       "po_number": "PO-2026-0421",
-      "supplier": "Jurong Hardware Supplies",
+      "supplier": "Tuas Fasteners & Finishes",
       "currency": "SGD",
       "lines": [
-        { "sku": "SCR-WD-40", "description": "Wood screw 4x40 (box)", "qty": 120, "unit_price": 7.8 },
-        { "sku": "GLU-PVA-5L", "description": "PVA wood glue 5L", "qty": 40, "unit_price": 18.0 }
+        { "sku": "FIX-CAM-15", "description": "Cam lock fixing (pack)", "qty": 150, "unit_price": 6.5 },
+        { "sku": "LAC-WB-5L", "description": "Water-based lacquer 5L", "qty": 30, "unit_price": 42.0 }
       ]
     }
   ],
   "invoices": [
     {
-      "invoice_number": "INV-88213",
+      "invoice_number": "HHE-30551",
       "po_number": "PO-2026-0412",
-      "supplier": "Binh Duong Timber Co.",
-      "invoice_date": "2026-10-20",
+      "supplier": "Hanoi Hardwood Exports",
+      "invoice_date": "2026-10-19",
       "currency": "USD",
       "tax_rate": 0.0,
       "tax_amount": 0.0,
       "lines": [
-        { "sku": "OAK-PNL-18", "description": "Oak veneer panel 18mm", "qty": 200, "unit_price": 24.5 },
-        { "sku": "HNG-SS-35", "description": "Stainless hinge 35mm", "qty": 800, "unit_price": 0.85 }
+        { "sku": "BIR-PNL-18", "description": "Birch plywood panel 18mm", "qty": 220, "unit_price": 21.9 },
+        { "sku": "DRW-SL-45", "description": "Soft-close drawer slide 45cm", "qty": 600, "unit_price": 2.35 }
       ]
     },
     {
-      "invoice_number": "SFM-10477",
+      "invoice_number": "DTW-7742",
       "po_number": "PO-2026-0418",
-      "supplier": "Saigon Fabric Mills",
-      "invoice_date": "2026-10-22",
+      "supplier": "Danang Textile Works",
+      "invoice_date": "2026-10-23",
       "currency": "USD",
       "tax_rate": 0.0,
       "tax_amount": 0.0,
       "lines": [
-        { "sku": "FAB-LIN-GR", "description": "Linen upholstery, grey (m)", "qty": 380, "unit_price": 6.45 }
+        { "sku": "FAB-CTN-NV", "description": "Cotton canvas, navy (m)", "qty": 430, "unit_price": 5.6 }
       ]
     },
     {
-      "invoice_number": "JHS-2291",
+      "invoice_number": "TFF-5108",
       "po_number": "PO-2026-0421",
-      "supplier": "Jurong Hardware Supplies",
-      "invoice_date": "2026-10-24",
+      "supplier": "Tuas Fasteners & Finishes",
+      "invoice_date": "2026-10-25",
       "currency": "SGD",
       "tax_rate": 0.09,
-      "tax_amount": 120.0,
+      "tax_amount": 180.0,
       "lines": [
-        { "sku": "SCR-WD-40", "description": "Wood screw 4x40 (box)", "qty": 120, "unit_price": 7.8 },
-        { "sku": "GLU-PVA-5L", "description": "PVA wood glue 5L", "qty": 40, "unit_price": 18.0 }
+        { "sku": "FIX-CAM-15", "description": "Cam lock fixing (pack)", "qty": 150, "unit_price": 6.5 },
+        { "sku": "LAC-WB-5L", "description": "Water-based lacquer 5L", "qty": 30, "unit_price": 42.0 }
       ]
     }
   ]
 }
-
