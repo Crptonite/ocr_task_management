@@ -1,0 +1,44 @@
+{
+  "members": ["Farah", "Jun Wei", "Priya", "Marcus"],
+  "projects": [
+    {
+      "id": "prj-1",
+      "name": "Block 214 lift modernisation",
+      "site": "Tampines St 21",
+      "owner": "Farah",
+      "brief": "Replace two passenger lifts, coordinate resident notices, contractor permits and safety inspection before handover.",
+      "start_date": "2026-09-15",
+      "due_date": "2026-12-15"
+    },
+    {
+      "id": "prj-2",
+      "name": "Annual fire safety audit",
+      "site": "Jurong East Business Park",
+      "owner": "Marcus",
+      "brief": "Inspect extinguishers, sprinklers and exit signage across all buildings and file the report with SCDF.",
+      "start_date": "2026-10-01",
+      "due_date": "2026-11-10"
+    },
+    {
+      "id": "prj-3",
+      "name": "Lobby LED retrofit",
+      "site": "Bishan Central",
+      "owner": "Priya",
+      "brief": "Swap fluorescent fittings for LED panels in three lobbies and measure energy savings.",
+      "start_date": "2026-10-10",
+      "due_date": "2026-11-28"
+    }
+  ],
+  "tasks": [
+    { "id": "tsk-1", "project_id": "prj-1", "title": "Issue resident notice", "owner": "Jun Wei", "due_date": "2026-09-30", "status": "done" },
+    { "id": "tsk-2", "project_id": "prj-1", "title": "Apply for BCA lift permit", "owner": "Farah", "due_date": "2026-10-20", "status": "in_progress" },
+    { "id": "tsk-3", "project_id": "prj-1", "title": "Confirm contractor schedule", "owner": "Marcus", "due_date": "2026-10-25", "status": "todo" },
+    { "id": "tsk-4", "project_id": "prj-1", "title": "Arrange third-party safety inspection", "owner": "Farah", "due_date": "2026-12-05", "status": "todo" },
+    { "id": "tsk-5", "project_id": "prj-2", "title": "Inspect extinguishers, Blocks A–C", "owner": "Marcus", "due_date": "2026-10-15", "status": "done" },
+    { "id": "tsk-6", "project_id": "prj-2", "title": "Sprinkler pressure test", "owner": "Priya", "due_date": "2026-10-24", "status": "in_progress" },
+    { "id": "tsk-7", "project_id": "prj-2", "title": "Replace faulty exit signs", "owner": "Jun Wei", "due_date": "2026-11-03", "status": "todo" },
+    { "id": "tsk-8", "project_id": "prj-2", "title": "Submit report to SCDF", "owner": "Marcus", "due_date": "2026-11-10", "status": "todo" },
+    { "id": "tsk-9", "project_id": "prj-3", "title": "Lighting survey of three lobbies", "owner": "Priya", "due_date": "2026-10-18", "status": "done" },
+    { "id": "tsk-10", "project_id": "prj-3", "title": "Get LED supplier quotes", "owner": "Jun Wei", "due_date": "2026-11-05", "status": "in_progress" }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "catalog": [
+    { "sku": "LAP-TP-X1", "name": "ThinkPad X1 Carbon Gen 12", "unit_price": 2150.0 },
+    { "sku": "MON-DL-27", "name": "Dell UltraSharp 27\" monitor", "unit_price": 489.0 },
+    { "sku": "DOC-USB-C", "name": "USB-C docking station", "unit_price": 189.0 },
+    { "sku": "SSD-SM-1T", "name": "Samsung 990 Pro 1TB SSD", "unit_price": 165.0 },
+    { "sku": "SW-CS-24", "name": "Cisco 24-port managed switch", "unit_price": 1320.0 },
+    { "sku": "CBL-C6-3M", "name": "Cat6 patch cable 3m", "unit_price": 4.2 }
+  ],
+  "orders": [
+    {
+      "order_number": "SO-24017",
+      "type": "sales",
+      "counterparty": "Tampines Polyclinic IT",
+      "order_date": "2026-10-21",
+      "delivery_date": "2026-10-30",
+      "currency": "SGD",
+      "total": 11190.0,
+      "status": "extracted",
+      "source_file": "SO-24017.pdf",
+      "lines": [
+        { "sku": "LAP-TP-X1", "description": "ThinkPad X1 Carbon Gen 12", "quantity": 4, "unit_price": 2150.0, "amount": 8600.0 },
+        { "sku": "MON-DL-27", "description": "Dell UltraSharp 27\"", "quantity": 4, "unit_price": 489.0, "amount": 1956.0 },
+        { "sku": "DOC-USB-C", "description": "USB-C dock", "quantity": 4, "unit_price": 158.5, "amount": 634.0 }
+      ]
+    },
+    {
+      "order_number": "PO-SP-0931",
+      "type": "purchase",
+      "counterparty": "Ingram Micro Asia",
+      "order_date": "2026-10-23",
+      "delivery_date": "2026-11-06",
+      "currency": "USD",
+      "total": 14040.0,
+      "status": "extracted",
+      "source_file": "ingram_po_0931.pdf",
+      "lines": [
+        { "sku": "SW-CS-24", "description": "Cisco 24-port managed switch", "quantity": 10, "unit_price": 1320.0, "amount": 13200.0 },
+        { "sku": "CBL-C6-3M", "description": "Cat6 patch cable 3m", "quantity": 200, "unit_price": 4.2, "amount": 840.0 }
+      ]
+    },
+    {
+      "order_number": "SO-24022",
+      "type": "sales",
+      "counterparty": "Woodlands Logistics Pte Ltd",
+      "order_date": "2026-10-26",
+      "delivery_date": "2026-10-24",
+      "currency": "SGD",
+      "total": 3500.0,
+      "status": "extracted",
+      "source_file": "woodlands_email_order.png",
+      "lines": [
+        { "sku": "SSD-SM-1T", "description": "990 Pro 1TB", "quantity": 12, "unit_price": 199.0, "amount": 2388.0 },
+        { "sku": "KB-LOG-MX", "description": "Logitech MX Keys", "quantity": 8, "unit_price": 139.0, "amount": 1112.0 }
+      ]
+    },
+    {
+      "order_number": null,
+      "type": "sales",
+      "counterparty": "Bedok North Secondary School",
+      "order_date": "2026-10-27",
+      "delivery_date": null,
+      "currency": "SGD",
+      "total": 2934.0,
+      "status": "extracted",
+      "source_file": "fax_scan_1027.jpg",
+      "lines": [
+        { "sku": "MON-DL-27", "description": "Dell 27 monitor", "quantity": 6, "unit_price": 489.0, "amount": 2934.0 }
+      ]
+    }
+  ]
+}
