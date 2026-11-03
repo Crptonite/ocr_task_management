@@ -1,9 +1,10 @@
 """Invoice extraction (OCR / LLM).
 
-Owner: Lucas (OCR & AI). Step 1 of the pipeline is in: read the PDF text layer
-and pull fields out with regexes. Still to do: OCR for scans / photos, and an
-LLM pass for supplier layouts the regexes don't know. Keep the return shape the
-same so the matching engine and frontend keep working.
+Owner: Lucas (OCR & AI). Step 1: read the PDF text layer and pull fields out with
+regexes. Step 2: when that leaves fields missing (or there is no text layer, as with
+scans and photos) and OPENAI_API_KEY is set, an OpenAI pass reads the document
+instead (app.ai.llm). Keep the return shape the same so the matching engine and
+frontend keep working.
 """
 import io
 import re
@@ -11,6 +12,8 @@ from datetime import datetime
 
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
+
+from app.ai import llm
 
 REQUIRED = ("invoice_number", "po_number", "supplier", "invoice_date", "currency", "lines")
 
@@ -59,6 +62,16 @@ def parse_invoice_text(text: str) -> dict:
     return fields
 
 
+def _try_llm(read, filename: str, content: bytes) -> tuple[dict | None, str | None]:
+    """(fields, None) on success; (None, reason) when the LLM is off or the call failed."""
+    if not llm.llm_enabled():
+        return None, None
+    try:
+        return read(filename, content), None
+    except Exception as exc:  # network, auth, quota, unreadable file: keep the regex result
+        return None, f"OpenAI read failed ({type(exc).__name__})"
+
+
 def extract_invoice(filename: str, content: bytes) -> dict:
     draft = {
         "invoice_number": None,
@@ -73,17 +86,29 @@ def extract_invoice(filename: str, content: bytes) -> dict:
         "size_bytes": len(content),
     }
     text = pdf_text(content) if content.startswith(b"%PDF") else None
-    if not text or not text.strip():
-        return {**draft, "confidence": 0.0, "note": "No text layer found (scan or image). OCR not implemented yet."}
+    has_text = bool(text and text.strip())
+    if has_text:
+        draft.update(parse_invoice_text(text))
+    source = "PDF text layer"
+    problem = None
 
-    draft.update(parse_invoice_text(text))
-    found = [k for k in REQUIRED if draft[k]]
+    if not has_text or any(not draft[k] for k in REQUIRED):
+        fields, problem = _try_llm(llm.read_invoice, filename, content)
+        if fields is not None:
+            draft.update(fields)
+            source = "OpenAI"
+
+    if not has_text and source != "OpenAI":
+        return {**draft, "confidence": 0.0, "missing": list(REQUIRED),
+                "note": problem or "No text layer found (scan or image). Set OPENAI_API_KEY to read these."}
+
     missing = [k for k in REQUIRED if not draft[k]]
+    note = f"Read by {source}" if source == "OpenAI" else "Read from PDF text layer"
     return {
         **draft,
-        "confidence": round(len(found) / len(REQUIRED), 2),
+        "confidence": round((len(REQUIRED) - len(missing)) / len(REQUIRED), 2),
         "missing": missing,
-        "note": "Read from PDF text layer" + (f"; missing {', '.join(missing)}" if missing else ""),
+        "note": note + (f"; missing {', '.join(missing)}" if missing else "") + (f"; {problem}" if problem else ""),
     }
 
 
@@ -149,16 +174,29 @@ def extract_order(filename: str, content: bytes) -> dict:
         "size_bytes": len(content),
     }
     text = pdf_text(content) if content.startswith(b"%PDF") else None
-    if not text or not text.strip():
-        return {**draft, "confidence": 0.0, "missing": list(ORDER_REQUIRED),
-                "note": "No text layer found (scan or image). OCR not implemented yet."}
+    has_text = bool(text and text.strip())
+    if has_text:
+        draft.update(parse_order_text(text))
+    source = "PDF text layer"
+    problem = None
 
-    draft.update(parse_order_text(text))
+    if not has_text or any(not draft[k] for k in ORDER_REQUIRED):
+        fields, problem = _try_llm(llm.read_order, filename, content)
+        if fields is not None:
+            draft.update(fields)
+            draft["order_date"] = normalize_date(draft["order_date"])
+            draft["delivery_date"] = normalize_date(draft["delivery_date"])
+            source = "OpenAI"
+
+    if not has_text and source != "OpenAI":
+        return {**draft, "confidence": 0.0, "missing": list(ORDER_REQUIRED),
+                "note": problem or "No text layer found (scan or image). Set OPENAI_API_KEY to read these."}
+
     missing = [k for k in ORDER_REQUIRED if not draft[k]]
+    note = f"Read by {source}" if source == "OpenAI" else "Read from PDF text layer"
     return {
         **draft,
         "confidence": round((len(ORDER_REQUIRED) - len(missing)) / len(ORDER_REQUIRED), 2),
         "missing": missing,
-        "note": "Read from PDF text layer" + (f"; missing {', '.join(missing)}" if missing else ""),
+        "note": note + (f"; missing {', '.join(missing)}" if missing else "") + (f"; {problem}" if problem else ""),
     }
-
