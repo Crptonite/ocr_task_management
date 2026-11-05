@@ -12,7 +12,7 @@ const label = (s) => s.replace(/_/g, " ");
 const setStat = (key, val) => ($(`[data-stat="${key}"]`).textContent = val);
 
 // Theme
-$("#theme-toggle").addEventListener("click", () => {
+$("#theme-toggle")?.addEventListener("click", () => {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
   localStorage.setItem("koda-theme", next);
@@ -20,17 +20,34 @@ $("#theme-toggle").addEventListener("click", () => {
 
 // Solid nav after scrolling past the hero
 const nav = $(".nav");
-addEventListener("scroll", () => nav.classList.toggle("scrolled", scrollY > $(".hero").offsetHeight * 0.8));
+if (nav) {
+  addEventListener("scroll", () => nav.classList.toggle("scrolled", scrollY > $(".hero").offsetHeight * 0.8));
+}
 
 async function api(path, options = {}) {
+  const headers = { ...options.headers };
+
+  // Let the browser set multipart/form-data boundary.
+  if (options.body instanceof FormData) {
+    delete headers["Content-Type"];
+  } else if (options.body && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(API + path, {
     ...options,
-    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    headers
   });
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(typeof body.detail === "string" ? body.detail : res.statusText);
+    throw new Error(
+      typeof body.detail === "string"
+        ? body.detail
+        : res.statusText
+    );
   }
+
   return res.status === 204 ? null : res.json();
 }
 
@@ -71,38 +88,50 @@ function showTab() {
     loaded[tab] = true;
     LOADERS[tab]().catch(() => {
       loaded[tab] = false;
-      $(`[data-view="${tab}"] tbody, [data-view="${tab}"] .cards`).innerHTML =
-        `<p class="muted">${esc(OFFLINE_HINT)}</p>`;
+      const container = $(`[data-view="${tab}"] tbody, [data-view="${tab}"] .cards`);
+      if (container) {
+        container.innerHTML = `<p class="muted">${esc(OFFLINE_HINT)}</p>`;
+      }
     });
   }
 }
+
 addEventListener("hashchange", () => {
   showTab();
-  // If the user is already past the hero, jump to the top of the new tab's content.
-  const contentTop = $(".hero").offsetHeight - nav.offsetHeight;
-  if (scrollY > contentTop) scrollTo({ top: contentTop });
+  const hero = $(".hero");
+  if (hero && nav) {
+    const contentTop = hero.offsetHeight - nav.offsetHeight;
+    if (scrollY > contentTop) scrollTo({ top: contentTop });
+  }
 });
 
 /* ---------- Koda: invoices ---------- */
 
 function renderInvoiceDetail(inv) {
-  const flags = inv.match.flags.length
+  if (!inv) return;
+  const flags = inv.match?.flags?.length
     ? `<ul>${inv.match.flags.map((f) => `<li class="${f.level}">${esc(f.message)}</li>`).join("")}</ul>`
     : `<p class="muted" style="margin-top:1rem">All lines agree with ${esc(inv.po_number)}.</p>`;
-  const lines = inv.lines
-    .map((l) => `<tr><td>${esc(l.sku)}</td><td class="num">${l.qty}</td><td class="num">${l.unit_price.toFixed(2)}</td></tr>`)
+  const lines = (inv.lines || [])
+    .map((l) => `<tr><td>${esc(l.sku)}</td><td class="num">${l.qty}</td><td class="num">${Number(l.unit_price).toFixed(2)}</td></tr>`)
     .join("");
   $("#invoice-detail").innerHTML = `
-    <span class="pill ${inv.match.status}">${inv.match.status}</span>
+    <span class="pill ${inv.match?.status || ""}">${inv.match?.status || ""}</span>
     <h3 style="margin-top:1rem">${esc(inv.invoice_number)}</h3>
     <p class="muted">${esc(inv.supplier)} · ${esc(inv.invoice_date)}</p>
     ${flags}
     <table><thead><tr><th>SKU</th><th class="num">Qty</th><th class="num">Unit</th></tr></thead><tbody>${lines}</tbody></table>
-    <p style="margin-top:1rem" class="num"><strong>${money(inv.total, inv.currency)}</strong></p>`;
+    <p style="margin-top:1rem" class="num"><strong>${money(inv.total, inv.currency)}</strong></p>
+    ${
+      inv.file_path
+        ? `<a class="btn btn-outline" style="margin-top:1rem" target="_blank" rel="noopener"
+             href="${API}/api/invoices/${encodeURIComponent(inv.invoice_number)}/file">Open PDF</a>`
+        : ""
+    }`;
 }
 
 function renderInvoices(invoices) {
-  const count = (s) => invoices.filter((i) => i.match.status === s).length;
+  const count = (s) => invoices.filter((i) => i.match?.status === s).length;
   setStat("inv-total", invoices.length);
   setStat("inv-matched", count("matched"));
   setStat("inv-review", count("review"));
@@ -114,14 +143,14 @@ function renderInvoices(invoices) {
       (inv, i) => `<tr data-i="${i}">
         <td>${esc(inv.invoice_number)}</td><td>${esc(inv.supplier)}</td><td>${esc(inv.po_number)}</td>
         <td class="num">${money(inv.total, inv.currency)}</td>
-        <td><span class="pill ${inv.match.status}">${inv.match.status}</span></td>
+        <td><span class="pill ${inv.match?.status || ""}">${inv.match?.status || ""}</span></td>
         <td>${trashButton("invoice", inv.invoice_number)}</td></tr>`
     )
     .join("");
   selectableRows(tbody, (row) => renderInvoiceDetail(invoices[row.dataset.i]));
   $$("[data-trash=invoice]", tbody).forEach((btn) =>
     btn.addEventListener("click", (e) => {
-      e.stopPropagation(); // do not also select the row
+      e.stopPropagation();
       deleteRecord(`/api/invoices/${encodeURIComponent(btn.dataset.id)}`, `invoice ${btn.dataset.id}`);
     })
   );
@@ -139,7 +168,7 @@ async function deleteRecord(path, name) {
     await loadInvoices();
     $("#invoice-detail").innerHTML = `<p class="muted">No invoice selected.</p>`;
   } catch (err) {
-    alert(err.message); // e.g. a PO that still has invoices
+    alert(err.message);
   }
 }
 
@@ -184,13 +213,17 @@ async function uploadGeneratedPdf(url, btn) {
     const name = /filename="(.+)"/.exec(res.headers.get("Content-Disposition"))?.[1] || "invoice.pdf";
     const body = new FormData();
     body.append("file", new File([blob], name, { type: "application/pdf" }));
-    const result = await fetch(API + "/api/invoices/upload", { method: "POST", body }).then((r) => r.json());
+    const uploadRes = await fetch(API + "/api/invoices/upload", { method: "POST", body });
+    const result = await uploadRes.json().catch(() => ({}));
+    if (!uploadRes.ok) throw new Error(result.detail || result.error || uploadRes.statusText);
     await afterInvoiceUpload(result);
   } catch (err) {
-    const out = $('[data-upload="/api/invoices/upload"]').nextElementSibling;
-    out.hidden = false;
-    out.textContent = `Upload failed: ${err.message}\n${OFFLINE_HINT}`;
-    out.scrollIntoView({ behavior: "smooth", block: "center" });
+    const out = $('[data-upload="/api/invoices/upload"]')?.nextElementSibling;
+    if (out) {
+      out.hidden = false;
+      out.textContent = `Upload failed: ${err.message}\n${OFFLINE_HINT}`;
+      out.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   } finally {
     btn.disabled = false;
   }
@@ -222,9 +255,9 @@ function updateProductHint(resetQty) {
   $("#pi-hint").textContent = `${p.po_number} · ordered ${p.ordered_qty} at ${money(p.unit_price, p.currency)}. Billing more than ordered is flagged as a mismatch.`;
 }
 
-$("#pi-product").addEventListener("change", () => updateProductHint(true));
-$("#pi-download").addEventListener("click", (e) => (e.currentTarget.href = productInvoiceUrl()));
-$("#product-invoice").addEventListener("submit", (e) => {
+$("#pi-product")?.addEventListener("change", () => updateProductHint(true));
+$("#pi-download")?.addEventListener("click", (e) => (e.currentTarget.href = productInvoiceUrl()));
+$("#product-invoice")?.addEventListener("submit", (e) => {
   e.preventDefault();
   uploadGeneratedPdf(productInvoiceUrl(), $("button[type=submit]", e.currentTarget));
 });
@@ -238,8 +271,7 @@ async function loadInvoices() {
   invoices = list;
   renderInvoices(invoices);
   renderPurchaseOrders(pos, variants);
-  // loadInvoices also runs after deletes: keep the user's current choice instead of resetting the form.
-  const chosen = { sku: $("#pi-product").value, qty: $("#pi-qty").value, variant: $("#pi-variant").value };
+  const chosen = { sku: $("#pi-product")?.value, qty: $("#pi-qty")?.value, variant: $("#pi-variant")?.value };
   renderProductInvoiceForm(prods, variants);
   if (products.some((p) => p.sku === chosen.sku)) {
     $("#pi-product").value = chosen.sku;
@@ -251,18 +283,33 @@ async function loadInvoices() {
 
 // Refresh the queue and open the uploaded invoice, or show the draft if fields were missing.
 async function afterInvoiceUpload(result) {
-  const out = $('[data-upload="/api/invoices/upload"]').nextElementSibling;
-  out.hidden = false;
+  const out = $('[data-upload="/api/invoices/upload"]')?.nextElementSibling;
+  if (out) out.hidden = false;
+
   if (!result.invoice) {
-    out.textContent = `Could not read every field (${result.draft.note}). Draft:\n` + JSON.stringify(result.draft, null, 2);
+    if (out) {
+      out.textContent = `Could not read every field (${result.draft?.note || "unrecognized format"}). Draft:\n` + JSON.stringify(result.draft, null, 2);
+    }
     return;
   }
-  out.textContent = `${result.invoice.invoice_number} read from ${result.draft.source_file} and added to the review queue (${result.invoice.match.status}).`;
+
+  if (out) {
+    out.textContent = `${result.invoice.invoice_number} read from ${result.draft?.source_file || "document"} and added to the review queue (${result.invoice.match?.status || "pending"}).` +
+      (result.saved
+        ? " PDF and details saved to the database."
+        : result.storage_error
+          ? ` Not saved to the database: ${result.storage_error}`
+          : "");
+  }
+
   invoices = await api("/api/invoices");
   renderInvoices(invoices);
+
   const row = $(`#invoice-rows tr[data-i="${invoices.length - 1}"]`);
-  row.click();
-  row.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (row) {
+    row.click();
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 }
 
 function selectableRows(tbody, onSelect) {
@@ -280,34 +327,38 @@ function selectableRows(tbody, onSelect) {
 let orders = [];
 let selectedOrderId = null;
 
-// One badge per order: workflow status once approved, otherwise the validation result.
-const orderBadge = (o) => (o.status === "extracted" ? o.validation.status : o.status);
+const orderBadge = (o) => (o.status === "extracted" ? o.validation?.status : o.status);
 
 function renderOrderDetail(o) {
-  const v = o.validation;
-  const issues = v.issues.length
+  if (!o) return;
+  const v = o.validation || { issues: [], flags: [], line_issues: [] };
+  const issues = v.issues?.length
     ? `<ul>${v.issues.map((i) => `<li class="error">${esc(i)}</li>`).join("")}</ul>`
     : `<p class="muted" style="margin-top:1rem">All checks passed.</p>`;
-  const lines = o.lines
+  const warnings = (v.flags || []).filter((f) => f.level === "warning");
+  const warningList = warnings.length ? `<ul>${warnings.map((f) => `<li class="warning">${esc(f.message)}</li>`).join("")}</ul>` : "";
+  const lines = (o.lines || [])
     .map(
-      (l, i) => `<tr${v.line_issues[i].length ? ' class="bad"' : ""}>
+      (l, i) => `<tr${v.line_issues?.[i]?.length ? ' class="bad"' : ""}>
         <td>${esc(l.sku || "—")}<br /><span class="muted">${esc(l.description)}</span>
-          ${v.line_issues[i].map((x) => `<br /><span class="line-issue">${esc(x)}</span>`).join("")}</td>
-        <td class="num">${l.quantity}</td><td class="num">${l.unit_price.toFixed(2)}</td><td class="num">${l.amount.toFixed(2)}</td></tr>`
+          ${(v.line_issues?.[i] || []).map((x) => `<br /><span class="line-issue">${esc(x)}</span>`).join("")}</td>
+        <td class="num">${l.quantity}</td><td class="num">${Number(l.unit_price).toFixed(2)}</td><td class="num">${Number(l.amount).toFixed(2)}</td></tr>`
     )
     .join("");
   const canApprove = o.status === "extracted" && v.status === "ready";
   $("#order-detail").innerHTML = `
-    <span class="pill ${orderBadge(o)}">${label(orderBadge(o))}</span>
+    <span class="pill ${orderBadge(o)}">${label(orderBadge(o) || "")}</span>
     <h3 style="margin-top:1rem">${esc(o.order_number || "No order number")}</h3>
     <p class="muted">${esc(o.counterparty)} · ${esc(o.type)} order</p>
     <p class="muted">Ordered ${esc(o.order_date || "—")} · Deliver ${esc(o.delivery_date || "—")} · from ${esc(o.source_file)}</p>
-    ${issues}
+    ${issues}${warningList}
     <table><thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Amount</th></tr></thead><tbody>${lines}</tbody></table>
     <p style="margin-top:1rem" class="num"><strong>${money(o.total ?? v.line_total, o.currency)}</strong></p>
     <button class="btn btn-outline" style="margin-top:1rem" id="approve-order" ${canApprove ? "" : "disabled"}>
-      ${o.status === "extracted" ? "Approve for export" : label(o.status)}</button>`;
-  $("#approve-order").addEventListener("click", async () => {
+      ${o.status === "extracted" ? "Approve for export" : label(o.status)}</button>
+    ${o.status === "extracted" ? `<button class="btn btn-outline" style="margin-top:1rem" id="edit-order">Edit</button>` : ""}`;
+  $("#edit-order")?.addEventListener("click", () => renderOrderEditor(o));
+  $("#approve-order")?.addEventListener("click", async () => {
     try {
       await api(`/api/orders/${o.id}/approve`, { method: "POST" });
       await loadOrders();
@@ -317,11 +368,67 @@ function renderOrderDetail(o) {
   });
 }
 
+function renderOrderEditor(o) {
+  const field = (name, text, type = "text") =>
+    `<label class="edit-field">${text}<input name="${name}" type="${type}" value="${esc(o[name])}" /></label>`;
+  const lineRow = (l = {}) => `<tr>
+    <td><input name="sku" value="${esc(l.sku)}" /></td><td><input name="description" value="${esc(l.description)}" /></td>
+    <td><input name="quantity" type="number" step="any" min="0" value="${esc(l.quantity)}" /></td>
+    <td><input name="unit_price" type="number" step="any" min="0" value="${esc(l.unit_price)}" /></td>
+    <td><button type="button" class="btn btn-outline btn-sm" data-drop-line>✕</button></td></tr>`;
+  $("#order-detail").innerHTML = `
+    <h3>Edit ${esc(o.id)}</h3>
+    <p class="muted">Check the values against the original document (${esc(o.source_file)}).</p>
+    <form id="order-edit">
+      ${field("order_number", "Order number")}${field("counterparty", "Customer")}
+      ${field("order_date", "Order date", "date")}${field("delivery_date", "Delivery date", "date")}${field("currency", "Currency")}
+      <table class="edit-lines"><thead><tr><th>SKU</th><th>Description</th><th>Qty</th><th>Unit price</th><th></th></tr></thead>
+        <tbody>${(o.lines || []).map(lineRow).join("")}</tbody></table>
+      <button type="button" class="btn btn-outline btn-sm" id="add-line">+ Add line</button>
+      <div style="margin-top:1rem"><button class="btn btn-outline" type="submit">Save and re-check</button>
+        <button class="btn btn-outline" type="button" id="cancel-edit">Cancel</button></div>
+    </form>`;
+  const form = $("#order-edit");
+  const tbody = $("tbody", form);
+  form.addEventListener("click", (e) => e.target.matches("[data-drop-line]") && e.target.closest("tr").remove());
+  $("#add-line").addEventListener("click", () => tbody.insertAdjacentHTML("beforeend", lineRow()));
+  $("#cancel-edit").addEventListener("click", () => renderOrderDetail(o));
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const val = (name) => form.elements[name].value;
+    const body = {
+      order_number: val("order_number"), counterparty: val("counterparty"), currency: val("currency"),
+      order_date: val("order_date") || null, delivery_date: val("delivery_date") || null,
+      lines: $$("tr", tbody).map((tr) => {
+        const v = (n) => $(`[name=${n}]`, tr).value;
+        return { sku: v("sku"), description: v("description"), quantity: Number(v("quantity")) || 0, unit_price: Number(v("unit_price")) || 0 };
+      }),
+    };
+    try {
+      await api(`/api/orders/${o.id}`, { method: "PATCH", body: JSON.stringify(body) });
+      await loadOrders();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+async function afterOrderUpload(result) {
+  const out = $('[data-upload="/api/orders/upload"]')?.nextElementSibling;
+  selectedOrderId = result.order.id;
+  await loadOrders();
+  const v = result.order.validation || { status: "", issues: [] };
+  if (out) {
+    out.textContent = `${result.order.id} read from ${result.draft?.source_file || "document"} and added to the order queue (${label(v.status)}${v.issues?.length ? `: ${v.issues.join("; ")}` : ""}). Use Edit to correct it.`;
+  }
+  $("#order-detail")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
 function renderOrders() {
   const count = (fn) => orders.filter(fn).length;
   setStat("ord-total", orders.length);
-  setStat("ord-ready", count((o) => o.status === "extracted" && o.validation.status === "ready"));
-  setStat("ord-attention", count((o) => o.status === "extracted" && o.validation.status === "needs_attention"));
+  setStat("ord-ready", count((o) => o.status === "extracted" && o.validation?.status === "ready"));
+  setStat("ord-attention", count((o) => o.status === "extracted" && o.validation?.status === "needs_attention"));
   setStat("ord-done", count((o) => o.status !== "extracted"));
 
   const tbody = $("#order-rows");
@@ -330,7 +437,7 @@ function renderOrders() {
       (o) => `<tr data-id="${o.id}" class="${o.id === selectedOrderId ? "active" : ""}">
         <td>${esc(o.order_number || "—")}</td><td>${esc(o.type)}</td><td>${esc(o.counterparty)}</td>
         <td class="num">${o.total == null ? "—" : money(o.total, o.currency)}</td>
-        <td><span class="pill ${orderBadge(o)}">${label(orderBadge(o))}</span></td>
+        <td><span class="pill ${orderBadge(o)}">${label(orderBadge(o) || "")}</span></td>
         <td>${trashButton("order", o.order_number || o.id)}</td></tr>`
     )
     .join("");
@@ -340,7 +447,7 @@ function renderOrders() {
   });
   $$("[data-trash=order]", tbody).forEach((btn) =>
     btn.addEventListener("click", async (e) => {
-      e.stopPropagation(); // do not also select the row
+      e.stopPropagation();
       const id = btn.closest("tr").dataset.id;
       if (!confirm(`Delete order ${btn.dataset.id}? This cannot be undone until the server restarts and reloads its sample data.`)) return;
       try {
@@ -364,17 +471,16 @@ async function loadOrders() {
   renderOrders();
 }
 
-// The export marks orders as exported, so refresh once the download has started.
-$("#export-orders").addEventListener("click", () => setTimeout(loadOrders, 800));
+$("#export-orders")?.addEventListener("click", () => setTimeout(loadOrders, 800));
 
 /* ---------- EM Services: projects ---------- */
 
 let projects = [];
-let project = null; // selected project with tasks
+let project = null;
 const STATUSES = { todo: "To do", in_progress: "In progress", done: "Done" };
 
 function renderProjects() {
-  const sum = (key) => projects.reduce((n, p) => n + p[key], 0);
+  const sum = (key) => projects.reduce((n, p) => n + (p[key] || 0), 0);
   setStat("prj-total", projects.length);
   setStat("prj-open", sum("task_count") - sum("done_count"));
   setStat("prj-overdue", sum("overdue_count"));
@@ -386,7 +492,7 @@ function renderProjects() {
         <span class="pill ${p.health}">${label(p.health)}</span>
         <h4>${esc(p.name)}</h4>
         <p class="muted">${esc(p.site)} · ${esc(p.owner)} · due ${esc(p.due_date)}</p>
-        <div class="progress"><span style="width:${p.progress * 100}%"></span></div>
+        <div class="progress"><span style="width:${(p.progress || 0) * 100}%"></span></div>
         <p class="muted">${p.done_count}/${p.task_count} tasks done${p.overdue_count ? ` · <span class="late">${p.overdue_count} overdue</span>` : ""}</p>
       </button>`
     )
@@ -413,7 +519,7 @@ function renderBoard() {
   $("#board-meta").textContent = project.brief;
   const owner = $("#owner-filter").value;
   const overdueOnly = $("#overdue-filter").checked;
-  const visible = project.tasks.filter((t) => (!owner || t.owner === owner) && (!overdueOnly || t.overdue));
+  const visible = (project.tasks || []).filter((t) => (!owner || t.owner === owner) && (!overdueOnly || t.overdue));
   $$(".column").forEach((col) => {
     const tasks = visible.filter((t) => t.status === col.dataset.status);
     $("h3", col).textContent = `${STATUSES[col.dataset.status]} (${tasks.length})`;
@@ -456,16 +562,16 @@ async function addTask(task) {
   await refreshProjects();
 }
 
-$("#task-form").addEventListener("submit", async (e) => {
+$("#task-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(e.target));
   await addTask({ title: data.title, owner: data.owner || null, due_date: data.due_date || null });
   e.target.reset();
 });
-$("#owner-filter").addEventListener("change", renderBoard);
-$("#overdue-filter").addEventListener("change", renderBoard);
+$("#owner-filter")?.addEventListener("change", renderBoard);
+$("#overdue-filter")?.addEventListener("change", renderBoard);
 
-$("#btn-summary").addEventListener("click", async () => {
+$("#btn-summary")?.addEventListener("click", async () => {
   const box = $("#ai-box");
   box.hidden = false;
   box.innerHTML = `<p class="muted">Summarizing…</p>`;
@@ -473,7 +579,7 @@ $("#btn-summary").addEventListener("click", async () => {
   box.innerHTML = `<span class="accent">AI summary</span><p>${esc(res.summary)}</p>`;
 });
 
-$("#btn-suggest").addEventListener("click", async () => {
+$("#btn-suggest")?.addEventListener("click", async () => {
   const box = $("#ai-box");
   box.hidden = false;
   box.innerHTML = `<p class="muted">Reading the project brief…</p>`;
@@ -492,8 +598,8 @@ async function loadProjects() {
   const [list, members] = await Promise.all([api("/api/projects"), api("/api/members")]);
   projects = list;
   const options = members.map((m) => `<option>${esc(m)}</option>`).join("");
-  $("#owner-filter").insertAdjacentHTML("beforeend", options);
-  $("#task-form [name=owner]").insertAdjacentHTML("beforeend", options);
+  $("#owner-filter")?.insertAdjacentHTML("beforeend", options);
+  $("#task-form [name=owner]")?.insertAdjacentHTML("beforeend", options);
   renderProjects();
 }
 
@@ -536,31 +642,97 @@ async function loadPlanning() {
 $$("form[data-upload]").forEach((form) => {
   const fileInput = $("input[type=file]", form);
   const out = form.nextElementSibling;
-  fileInput.addEventListener("change", () => ($("label", form).textContent = fileInput.files[0]?.name || "Choose a file"));
-  ["dragover", "dragleave", "drop"].forEach((evt) =>
+  const button = $('button[type="submit"]', form);
+
+  fileInput.addEventListener("change", () => {
+    const lbl = $("label", form);
+    if (lbl) {
+      lbl.textContent = fileInput.files[0]?.name || "Choose a file";
+    }
+  });
+
+  ["dragover", "dragleave", "drop"].forEach((evt) => {
     form.addEventListener(evt, (e) => {
       e.preventDefault();
       form.classList.toggle("drag", evt === "dragover");
+
       if (evt === "drop") {
         fileInput.files = e.dataTransfer.files;
         fileInput.dispatchEvent(new Event("change"));
       }
-    })
-  );
+    });
+  });
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!fileInput.files.length) return;
+
+    const file = fileInput.files[0];
+
+    if (!file) {
+      out.hidden = false;
+      out.textContent = "Please select a file first.";
+      return;
+    }
+
+    const allowedMimeTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ];
+
+    const isPdfOrImage = allowedMimeTypes.includes(file.type) || /\.(pdf|jpe?g|png|webp)$/i.test(file.name);
+
+    if (!isPdfOrImage) {
+      out.hidden = false;
+      out.textContent = "Only PDF, JPG, PNG and WEBP files are supported.";
+      return;
+    }
+
     const body = new FormData();
-    body.append("file", fileInput.files[0]);
+    body.append("file", file);
+
     out.hidden = false;
-    out.textContent = "Uploading…";
+    out.textContent = "Uploading and extracting document...";
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Processing...";
+    }
+
     try {
-      const res = await fetch(API + form.dataset.upload, { method: "POST", body });
-      const result = await res.json();
-      if ("invoice" in result) await afterInvoiceUpload(result);
-      else out.textContent = JSON.stringify(result, null, 2);
+      const res = await fetch(API + form.dataset.upload, {
+        method: "POST",
+        body
+      });
+
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          result.detail || result.error || res.statusText
+        );
+      }
+
+      if ("invoice" in result) {
+        await afterInvoiceUpload(result);
+      } else if (result.order) {
+        await afterOrderUpload(result);
+      } else {
+        out.textContent =
+          (result.draft?.note || "Document uploaded, but extraction was incomplete.") +
+          "\n" +
+          JSON.stringify(result.draft || result, null, 2);
+      }
+
     } catch (err) {
       out.textContent = `Upload failed: ${err.message}\n${OFFLINE_HINT}`;
+
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Upload";
+      }
     }
   });
 });

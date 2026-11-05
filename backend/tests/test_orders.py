@@ -94,3 +94,19 @@ def test_delete_order():
     assert len(client.get("/api/orders").json()) == before - 1
     assert client.get(f"/api/orders/{first}").status_code == 404
     assert client.delete(f"/api/orders/{first}").status_code == 404
+
+
+def test_flags_list_errors_and_warnings():
+    lines = [{"sku": "A-1", "description": "Gaming rig", "quantity": 2, "unit_price": 10.0, "amount": 20.0}]
+    result = validate_order(order(lines=lines), CATALOG)
+    assert result["status"] == "ready"  # a changed product name warns, it does not block
+    assert [f["level"] for f in result["flags"]] == ["warning"]
+    assert "Gaming rig" in result["flags"][0]["message"]
+
+
+def test_duplicate_order_number_is_flagged():
+    existing = order()
+    result = validate_order(order(), CATALOG, [existing])
+    assert result["status"] == "needs_attention"
+    assert any("duplicate" in f["message"] for f in result["flags"] if f["level"] == "error")
+    assert validate_order(existing, CATALOG, [existing])["status"] == "ready"  # not a duplicate of itself

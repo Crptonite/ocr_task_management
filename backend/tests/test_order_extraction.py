@@ -85,3 +85,40 @@ def test_koda_entry_endpoint():
     res = client.get(f"/api/orders/{first['id']}/koda-entry")
     assert res.status_code == 200 and "record" in res.json()
     assert client.get("/api/orders/nope/koda-entry").status_code == 404
+
+
+def upload_po(**kw):
+    return client.post("/api/orders/upload", files={"file": ("po.pdf", po_pdf(**kw), "application/pdf")}).json()
+
+
+def test_upload_adds_order_to_queue_with_id():
+    order = upload_po()["order"]
+    assert order["id"].startswith("ord-") and order["status"] == "extracted"
+    assert client.get(f"/api/orders/{order['id']}").json()["order_number"] == "CPO-7781"
+
+
+def test_unreadable_upload_is_not_queued():
+    before = len(client.get("/api/orders").json())
+    res = client.post("/api/orders/upload", files={"file": ("scan.png", b"\x89PNG", "image/png")}).json()
+    assert res["order"] is None and len(client.get("/api/orders").json()) == before
+
+
+def test_edit_fixes_order_and_flows_into_csv():
+    order = upload_po(delivery=None)["order"]
+    assert order["validation"]["status"] == "needs_attention"
+    edited = client.patch(f"/api/orders/{order['id']}", json={
+        "delivery_date": "2026-11-20", "order_number": "CPO-7781-A",
+        "lines": [{"sku": "lap-tp-x1", "description": "ThinkPad X1 Carbon Gen 12", "quantity": 5, "unit_price": 2150}],
+    }).json()
+    assert edited["total"] == 10750.0 and edited["lines"][0]["sku"] == "LAP-TP-X1"
+    assert edited["validation"]["status"] == "ready"
+    client.post(f"/api/orders/{order['id']}/approve")
+    csv_text = client.get("/api/orders/export.csv").text
+    assert "CPO-7781-A" in csv_text and "2026-11-20" in csv_text and ",5,2150.0,10750.0" in csv_text
+
+
+def test_cannot_edit_approved_order():
+    order = upload_po()["order"]
+    client.patch(f"/api/orders/{order['id']}", json={"lines": [{"sku": "LAP-TP-X1", "description": "ThinkPad X1 Carbon Gen 12", "quantity": 4, "unit_price": 2150}, {"sku": "MON-DL-27", "description": "Dell UltraSharp 27\"", "quantity": 4, "unit_price": 489}]})
+    assert client.post(f"/api/orders/{order['id']}/approve").status_code == 200
+    assert client.patch(f"/api/orders/{order['id']}", json={"order_number": "X"}).status_code == 409

@@ -9,8 +9,20 @@ PRICE_DEVIATION = 0.10  # 10% from catalogue list price
 AMOUNT_TOLERANCE = 0.05
 
 
-def validate_order(order: dict, catalog: list[dict]) -> dict:
+def validate_order(order: dict, catalog: list[dict], others: list[dict] | None = None) -> dict:
+    """`others` are the orders already on file, used to spot a customer PO entered twice.
+
+    `issues` (errors) block approval. `flags` lists every discrepancy with a level, so
+    warnings such as a changed product name are visible without blocking.
+    """
     issues: list[str] = []
+    warnings: list[str] = []
+    if order.get("order_number") and any(
+        o is not order and o.get("order_number") == order["order_number"]
+        and (o.get("counterparty") or "").strip().lower() == (order.get("counterparty") or "").strip().lower()
+        for o in others or []
+    ):
+        issues.append(f"Possible duplicate: order {order['order_number']} is already on file")
     if not order.get("order_number"):
         issues.append("Missing order number")
     if not order.get("counterparty"):
@@ -38,6 +50,8 @@ def validate_order(order: dict, catalog: list[dict]) -> dict:
             li.append("Quantity must be positive")
         if abs(line["quantity"] * line["unit_price"] - line["amount"]) > AMOUNT_TOLERANCE:
             li.append("Amount ≠ qty × price")
+        if item and line.get("description") and line["description"].strip().lower() not in item["name"].lower()                 and item["name"].lower() not in line["description"].strip().lower():
+            warnings.append(f"{line['sku']}: described as \"{line['description']}\", catalogue says \"{item['name']}\"")
         if item and item["unit_price"] > 0:
             dev = (line["unit_price"] - item["unit_price"]) / item["unit_price"]
             if abs(dev) > PRICE_DEVIATION:
@@ -52,9 +66,15 @@ def validate_order(order: dict, catalog: list[dict]) -> dict:
     if bad_lines:
         issues.append(f"{bad_lines} line(s) need attention")
 
+    flags = [{"level": "error", "message": m} for m in issues]
+    flags += [{"level": "error", "message": f"{line.get('sku') or 'Line ' + str(n)}: {m}"}
+              for n, (line, li) in enumerate(zip(lines, line_issues), start=1) for m in li]
+    flags += [{"level": "warning", "message": m} for m in warnings]
+
     return {
         "status": "needs_attention" if issues else "ready",
         "issues": issues,
+        "flags": flags,
         "line_issues": line_issues,
         "line_total": line_total,
     }

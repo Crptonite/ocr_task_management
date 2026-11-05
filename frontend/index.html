@@ -6,7 +6,7 @@
   <title>Koda · Workspace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="./css/styles.css" />
   <script>
     // Apply saved theme before paint to avoid a flash.
     document.documentElement.dataset.theme = localStorage.getItem("koda-theme") || "dark";
@@ -89,18 +89,38 @@
         </form>
       </section>
 
-      <section class="block">
-        <div class="block-head">
-          <h2>Upload an invoice</h2>
-          <p class="muted">PDF or scanned image. Extraction runs on the server.</p>
-        </div>
-        <form class="dropzone" data-upload="/api/invoices/upload">
-          <input type="file" id="invoice-file" name="file" accept=".pdf,image/*" />
-          <label for="invoice-file"><strong>Choose a file</strong> or drag it here</label>
-          <button type="submit" class="btn btn-outline">Upload</button>
-        </form>
-        <pre class="result" hidden></pre>
-      </section>
+
+
+<section class="block">
+  <div class="block-head">
+    <h2>Upload an invoice</h2>
+    <p class="muted">
+      PDF or scanned image. Extraction runs on the server.
+    </p>
+  </div>
+
+  <form class="dropzone" data-upload="/api/invoices/upload">
+    <input
+      type="file"
+      id="invoice-file"
+      name="file"
+      accept=".pdf,image/jpeg,image/png,image/webp"
+      required
+    />
+
+    <label for="invoice-file">
+      <strong>Choose a file</strong> or drag it here
+    </label>
+
+    <button type="submit" class="btn btn-outline">
+      Upload
+    </button>
+  </form>
+
+  <pre class="result" hidden></pre>
+</section>
+
+
     </div>
 
     <!-- Spectra: order automation -->
@@ -248,6 +268,6 @@
     <span class="muted">Workspace prototype · Koda · Spectra · EM Services · IT2134 × SCCCI</span>
   </footer>
 
-  <script src="js/app.js"></script>
+  <script src="./js/app.js"></script>
 </body>
 </html>

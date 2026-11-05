@@ -1,10 +1,11 @@
 """Koda: supplier invoices vs purchase orders."""
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
 
 from app import store
 from app.ai.extractor import extract_invoice
 from app.services.invoice_pdf import VARIANTS, invoice_from_po, render_invoice_pdf
+from app.services import supabase_store
 from app.services.matching import match_invoice
 
 router = APIRouter(prefix="/api", tags=["invoices (Koda)"])
@@ -109,8 +110,39 @@ async def upload_invoice(file: UploadFile = File(...)):
     draft = extract_invoice(file.filename or "upload", content)
     if draft["confidence"] < 1:
         return {"draft": draft, "invoice": None}
-    store.erp["invoices"].append({k: draft[k] for k in INVOICE_FIELDS})
-    return {"draft": draft, "invoice": list_invoices()[-1]}
+    record = {k: draft[k] for k in INVOICE_FIELDS}
+    saved, storage_error = False, None
+    if supabase_store.enabled():  # keep the PDF and the row; a Supabase outage must not lose the upload
+        path = None
+        try:
+            path = supabase_store.upload_file(draft["source_file"], content)
+            record["file_path"] = path
+            supabase_store.save_invoice(record, path)
+            saved = True
+        except Exception as exc:
+            storage_error = str(exc)
+            record.pop("file_path", None)
+            if path:  # no row points at the file, so do not leave it orphaned
+                try:
+                    supabase_store.delete_file(path)
+                except Exception:
+                    pass
+    store.erp["invoices"].append(record)
+    return {"draft": draft, "invoice": list_invoices()[-1], "saved": saved, "storage_error": storage_error}
+
+
+@router.get("/invoices/{invoice_number}/file")
+def open_invoice_file(invoice_number: str):
+    """Redirects to a short-lived link for the uploaded PDF."""
+    inv = next((i for i in store.erp["invoices"] if i["invoice_number"] == invoice_number), None)
+    if inv is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    if not inv.get("file_path"):
+        raise HTTPException(status_code=404, detail="No file was stored for this invoice")
+    try:
+        return RedirectResponse(supabase_store.signed_url(inv["file_path"]))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Could not open the file: {exc}")
 
 
 @router.delete("/invoices/{invoice_number}", status_code=204)
@@ -120,6 +152,11 @@ def delete_invoice(invoice_number: str):
     if match is None:
         raise HTTPException(status_code=404, detail="Invoice not found")
     invoices.remove(match)
+    if supabase_store.enabled() and (match.get("file_path") or match.get("source_file")):
+        try:
+            supabase_store.delete_invoice(invoice_number, match.get("file_path"))
+        except Exception:
+            pass  # the invoice is already gone from the queue; a stale row is reloaded as a duplicate at worst
 
 
 @router.delete("/purchase-orders/{po_number}", status_code=204)
