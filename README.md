@@ -4,6 +4,14 @@ AI-assisted invoice checking for **Koda Ltd** (Problem Statement 6b, SCCCI × NY
 
 Staff upload a supplier invoice → the system extracts the fields → matches them against the purchase order → flags price, quantity, tax and duplicate issues → staff approve and export for Dynamics.
 
+The same workspace also has tabs for two related problem statements:
+
+- **Orders (Spectra Innovations):** extract purchase / sales orders, validate line items against the catalogue, approve, export CSV for ERP entry.
+- **Projects (EM Services):** projects broken into tasks with owners and deadlines, a task board, filters, overdue summary and AI task suggestions.
+- **Planning (Koda):** customer orders exploded into materials, checked against stock and inbound deliveries, with shortage alerts, a suggested build order and purchase suggestions (`GET /api/planning`).
+
+Customer PO upload (`POST /api/orders/upload`) reads customer, product lines, quantities and delivery date from the PDF text layer and validates them. `GET /api/orders/{id}/koda-entry` returns the normalised record for Koda entry.
+
 ## Team
 
 | Member | Role | Owns |
@@ -19,9 +27,11 @@ Staff upload a supplier invoice → the system extracts the fields → matches t
 backend/
   app/
     main.py            FastAPI app + serves the frontend
-    services/          matching engine (invoice vs PO)
-    ai/                extraction pipeline (OCR / LLM)
-    data/              mock ERP data (POs, invoices)
+    routers/           API per tab: invoices, orders, projects
+    services/          rules: invoice matching, order validation, project progress
+    ai/                extraction (OCR / LLM) and task suggestions
+    data/              mock data (ERP, orders, projects)
+    store.py           in-memory store until Supabase
   tests/               pytest
 frontend/              static HTML / CSS / JS (light + dark mode)
 docs/                  architecture, meeting notes, client Q&A

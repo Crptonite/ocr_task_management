@@ -1,14 +1,29 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import invoices, orders, planning, projects
+from app import store
+from app.services import supabase_store
+from app.routers import invoice_generator, invoices, orders, planning, projects
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
-app = FastAPI(title="Koda Workspace API", version="0.2.0")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Bring back invoices saved in Supabase so uploads survive a restart."""
+    if supabase_store.enabled():
+        try:
+            known = {i["invoice_number"] for i in store.erp["invoices"]}
+            store.erp["invoices"].extend(i for i in supabase_store.load_invoices() if i["invoice_number"] not in known)
+        except Exception as exc:
+            print(f"Supabase invoices not loaded: {exc}")
+    yield
+
+
+app = FastAPI(title="Koda Workspace API", version="0.2.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,6 +33,7 @@ app.add_middleware(
 )
 
 app.include_router(invoices.router)  # Koda: invoice checking
+app.include_router(invoice_generator.router)  # standalone invoice generator
 app.include_router(orders.router)    # Spectra: order automation
 app.include_router(projects.router)  # EM Services: project tracker
 app.include_router(planning.router)  # Koda: material requirements and production priorities
