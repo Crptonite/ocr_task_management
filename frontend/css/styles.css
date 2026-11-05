@@ -210,3 +210,7 @@ input:not([type=checkbox]):not([type=file]), select {
 .edit-field input, .edit-lines input { width: 100%; padding: .35rem .5rem; font: inherit; color: inherit; background: transparent; border: 1px solid var(--border, currentColor); border-radius: 6px; }
 .edit-lines { margin: 1rem 0 .6rem; }
 .edit-lines td { padding: .2rem .25rem; }
+
+.table .filters th { padding: .3rem .8rem .8rem; text-transform: none; letter-spacing: 0; }
+.table .filters select { width: 100%; font-size: .78rem; padding: .3rem .4rem; }
+#documents-table tbody tr { cursor: default; }

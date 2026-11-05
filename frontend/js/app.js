@@ -54,6 +54,11 @@ async function api(path, options = {}) {
 /* ---------- Tabs ---------- */
 
 const HERO = {
+  documents: {
+    eyebrow: "Koda · Overview",
+    title: "Every document,<br />one list.",
+    lede: "Invoices and orders side by side. Filter by any column; the CSV stays in step with every new order or invoice.",
+  },
   invoices: {
     eyebrow: "Koda · Accounts Payable",
     title: "Every invoice,<br />checked against<br />every order.",
@@ -78,13 +83,13 @@ const HERO = {
 const loaded = {};
 
 function showTab() {
-  const tab = HERO[location.hash.slice(1)] ? location.hash.slice(1) : "invoices";
+  const tab = HERO[location.hash.slice(1)] ? location.hash.slice(1) : "documents";
   $$(".view").forEach((v) => (v.hidden = v.dataset.view !== tab));
   $$("[data-tab]").forEach((a) => a.classList.toggle("active", a.dataset.tab === tab));
   $("#hero-eyebrow").textContent = HERO[tab].eyebrow;
   $("#hero-title").innerHTML = HERO[tab].title;
   $("#hero-lede").textContent = HERO[tab].lede;
-  if (!loaded[tab]) {
+  if (!loaded[tab] || tab === "documents") {  // documents change from other tabs, so always refetch
     loaded[tab] = true;
     LOADERS[tab]().catch(() => {
       loaded[tab] = false;
@@ -104,6 +109,39 @@ addEventListener("hashchange", () => {
     if (scrollY > contentTop) scrollTo({ top: contentTop });
   }
 });
+
+/* ---------- Documents overview ---------- */
+
+const DOC_COLS = ["Document", "Type", "Company", "Date", "Amount", "Status"];
+let documents = [];
+const docFilters = {};
+
+function renderDocuments() {
+  DOC_COLS.forEach((col) => {
+    const sel = $(`#documents-table select[data-col="${col}"]`);
+    const values = [...new Set(documents.map((d) => d[col]).filter((v) => v !== ""))].sort();
+    sel.innerHTML = `<option value="">All</option>` + values.map((v) => `<option value="${esc(v)}">${esc(label(v))}</option>`).join("");
+    sel.value = values.includes(docFilters[col]) ? docFilters[col] : "";
+    docFilters[col] = sel.value;
+  });
+  const shown = documents.filter((d) => DOC_COLS.every((c) => !docFilters[c] || d[c] === docFilters[c]));
+  $("#document-rows").innerHTML = shown.length
+    ? shown.map((d) => `<tr><td>${esc(d.Document)}</td><td>${esc(d.Type)}</td><td>${esc(d.Company)}</td><td>${esc(d.Date || "—")}</td>
+        <td class="num">${d.Amount === "" ? "—" : money(d.Amount, d.Currency)}</td>
+        <td><span class="pill ${esc(d.Status)}">${esc(label(d.Status))}</span></td></tr>`).join("")
+    : `<tr><td colspan="6" class="muted">No documents match.</td></tr>`;
+}
+
+$("#documents-table")?.addEventListener("change", (e) => {
+  if (!e.target.dataset.col) return;
+  docFilters[e.target.dataset.col] = e.target.value;
+  renderDocuments();
+});
+
+async function loadDocuments() {
+  documents = await api("/api/documents");
+  renderDocuments();
+}
 
 /* ---------- Koda: invoices ---------- */
 
@@ -738,5 +776,5 @@ $$("form[data-upload]").forEach((form) => {
 });
 
 // Init
-const LOADERS = { invoices: loadInvoices, orders: loadOrders, projects: loadProjects, planning: loadPlanning };
+const LOADERS = { documents: loadDocuments, invoices: loadInvoices, orders: loadOrders, projects: loadProjects, planning: loadPlanning };
 showTab();

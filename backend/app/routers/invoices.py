@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse, Response
 from app import store
 from app.ai.extractor import extract_invoice
 from app.services.invoice_pdf import VARIANTS, invoice_from_po, render_invoice_pdf
-from app.services import supabase_store
+from app.services import documents, supabase_store
 from app.services.matching import match_invoice
 
 router = APIRouter(prefix="/api", tags=["invoices (Koda)"])
@@ -128,6 +128,7 @@ async def upload_invoice(file: UploadFile = File(...)):
                 except Exception:
                     pass
     store.erp["invoices"].append(record)
+    documents.sync_csv()
     return {"draft": draft, "invoice": list_invoices()[-1], "saved": saved, "storage_error": storage_error}
 
 
@@ -152,6 +153,7 @@ def delete_invoice(invoice_number: str):
     if match is None:
         raise HTTPException(status_code=404, detail="Invoice not found")
     invoices.remove(match)
+    documents.sync_csv()
     if supabase_store.enabled() and (match.get("file_path") or match.get("source_file")):
         try:
             supabase_store.delete_invoice(invoice_number, match.get("file_path"))
@@ -168,3 +170,4 @@ def delete_purchase_order(po_number: str):
     if billed:
         raise HTTPException(status_code=409, detail=f"Delete invoice {', '.join(billed)} first")
     store.erp["purchase_orders"].remove(po)
+    documents.sync_csv()

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from app import store
 from app.ai.extractor import extract_order
+from app.services import documents
 from app.services.orders import koda_entry, orders_to_csv, validate_order
 
 router = APIRouter(prefix="/api", tags=["orders (Spectra)"])
@@ -57,6 +58,7 @@ def export_orders():
     csv_text = orders_to_csv(approved)
     for order in approved:
         order["status"] = "exported"
+    documents.sync_csv()
     return Response(
         csv_text,
         media_type="text/csv",
@@ -83,6 +85,7 @@ def approve_order(order_id: str):
     if validation["status"] != "ready":
         raise HTTPException(status_code=409, detail="Fix validation issues before approving")
     order["status"] = "approved"
+    documents.sync_csv()
     return with_validation(order)
 
 
@@ -105,12 +108,14 @@ def update_order(order_id: str, body: OrderPatch):
             for l in lines
         ]
         order["total"] = round(sum(l["amount"] for l in order["lines"]), 2)
+    documents.sync_csv()
     return with_validation(order)
 
 
 @router.delete("/orders/{order_id}", status_code=204)
 def delete_order(order_id: str):
     store.orders["orders"].remove(find_order(order_id))
+    documents.sync_csv()
 
 
 @router.post("/orders/upload")
@@ -122,4 +127,5 @@ async def upload_order(file: UploadFile = File(...)):
         return {"draft": draft, "validation": validation, "order": None}
     order = {"id": store.next_id("ord", store.orders["orders"]), **draft, "status": "extracted"}
     store.orders["orders"].append(order)
+    documents.sync_csv()
     return {"draft": draft, "validation": validation, "order": with_validation(order)}

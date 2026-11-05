@@ -6,8 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app import store
-from app.services import supabase_store
-from app.routers import invoice_generator, invoices, orders, planning, projects
+from app.services import documents as documents_service, supabase_store
+from app.routers import documents, invoice_generator, invoices, orders, planning, projects
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
@@ -20,6 +20,7 @@ async def lifespan(_: FastAPI):
             store.erp["invoices"].extend(i for i in supabase_store.load_invoices() if i["invoice_number"] not in known)
         except Exception as exc:
             print(f"Supabase invoices not loaded: {exc}")
+    documents_service.sync_csv()
     yield
 
 
@@ -32,6 +33,7 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],  # lets a separately hosted frontend read PDF filenames
 )
 
+app.include_router(documents.router)  # combined document list + CSV
 app.include_router(invoices.router)  # Koda: invoice checking
 app.include_router(invoice_generator.router)  # standalone invoice generator
 app.include_router(orders.router)    # Spectra: order automation
