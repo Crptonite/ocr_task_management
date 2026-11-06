@@ -1,119 +1,848 @@
+
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Invoice Generator</title>
-  <style>
-    :root { --bg:#faf8f5; --fg:#1f1d1a; --muted:#6b665f; --line:#e3ded6; --card:#fff; --accent:#1f1d1a; }
-    @media (prefers-color-scheme: dark) { :root { --bg:#161513; --fg:#f0ece6; --muted:#9a948b; --line:#33302c; --card:#1e1c1a; --accent:#f0ece6; } }
-    * { box-sizing: border-box; }
-    body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, sans-serif; }
-    main { max-width:820px; margin:0 auto; padding:32px 16px 64px; }
-    h1 { margin:0 0 4px; } .muted { color:var(--muted); margin:0 0 24px; }
-    form { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; }
-    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
-    label { display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted); }
-    input, select { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--fg); }
-    h2 { font-size:16px; margin:24px 0 8px; }
-    table { width:100%; border-collapse:collapse; }
-    th { text-align:left; font-size:12px; color:var(--muted); padding:4px; }
-    td { padding:4px; } td input { width:100%; } td.amt { text-align:right; white-space:nowrap; }
-    .num { text-align:right; } td input.num { text-align:right; }
-    button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--accent); background:transparent; color:var(--fg); cursor:pointer; }
-    button.primary { background:var(--accent); color:var(--bg); }
-    .totals { margin:16px 0 0 auto; width:260px; } .totals div { display:flex; justify-content:space-between; padding:2px 0; }
-    .totals .grand { font-weight:700; border-top:1px solid var(--line); margin-top:4px; padding-top:6px; }
-    .actions { display:flex; gap:10px; margin-top:20px; align-items:center; } #msg { color:#b3261e; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invoice Management</title>
+
+<style>
+:root {
+  --bg:#faf8f5;
+  --fg:#1f1d1a;
+  --muted:#77716a;
+  --line:#e3ded6;
+  --card:#fff;
+  --accent:#1f1d1a;
+  --danger:#dc2626;
+  --success:#15803d;
+}
+
+@media(prefers-color-scheme:dark) {
+  :root {
+    --bg:#161513;
+    --fg:#f0ece6;
+    --muted:#aaa39a;
+    --line:#33302c;
+    --card:#1e1c1a;
+    --accent:#f0ece6;
+  }
+}
+
+* { box-sizing:border-box; }
+
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font:15px/1.5 system-ui,sans-serif;
+}
+
+main {
+  max-width:1050px;
+  margin:auto;
+  padding:32px 16px 64px;
+}
+
+.header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  flex-wrap:wrap;
+  margin-bottom:25px;
+}
+
+h1 { margin:0; }
+h2 { font-size:17px; margin:25px 0 12px; }
+
+.muted { color:var(--muted); }
+
+button {
+  font:inherit;
+  padding:9px 14px;
+  border-radius:8px;
+  border:1px solid var(--line);
+  background:var(--card);
+  color:var(--fg);
+  cursor:pointer;
+}
+
+button:hover { opacity:.8; }
+
+button.primary {
+  background:var(--accent);
+  color:var(--bg);
+  border-color:var(--accent);
+}
+
+button.danger {
+  color:var(--danger);
+  border-color:var(--danger);
+}
+
+.invoice-layout {
+  display:grid;
+  grid-template-columns:230px minmax(0,1fr);
+  gap:20px;
+  align-items:start;
+}
+
+.sidebar {
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:15px;
+}
+
+.sidebar-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+}
+
+.invoice-list {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.invoice-tab {
+  text-align:left;
+  width:100%;
+  padding:11px;
+  border:1px solid var(--line);
+  border-radius:8px;
+}
+
+.invoice-tab.active {
+  border:2px solid var(--accent);
+  background:var(--bg);
+}
+
+.invoice-tab strong,
+.invoice-tab small {
+  display:block;
+}
+
+.invoice-tab small {
+  color:var(--muted);
+  margin-top:3px;
+}
+
+.editor {
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:22px;
+  min-width:0;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:14px;
+}
+
+label {
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  font-size:13px;
+  color:var(--muted);
+}
+
+input,select {
+  width:100%;
+  min-width:0;
+  font:inherit;
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--bg);
+  color:var(--fg);
+}
+
+.table-wrap {
+  overflow-x:auto;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  min-width:530px;
+}
+
+th {
+  text-align:left;
+  font-size:12px;
+  color:var(--muted);
+  padding:9px 5px;
+}
+
+td {
+  padding:5px;
+}
+
+td input { width:100%; }
+
+.num { text-align:right; }
+
+td.amt {
+  text-align:right;
+  white-space:nowrap;
+}
+
+.totals {
+  margin:20px 0 0 auto;
+  width:260px;
+  max-width:100%;
+}
+
+.totals div {
+  display:flex;
+  justify-content:space-between;
+  padding:4px 0;
+}
+
+.grand {
+  font-weight:700;
+  border-top:1px solid var(--line);
+  margin-top:5px;
+  padding-top:9px!important;
+  font-size:18px;
+}
+
+.actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-top:25px;
+}
+
+.message {
+  margin-top:12px;
+  color:var(--danger);
+}
+
+.empty {
+  text-align:center;
+  padding:40px 15px;
+  color:var(--muted);
+}
+
+@media(max-width:700px) {
+  .invoice-layout {
+    grid-template-columns:1fr;
+  }
+
+  .invoice-list {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .editor { padding:15px; }
+}
+</style>
 </head>
+
 <body>
 <main>
-  <h1>Invoice Generator</h1>
-  <p class="muted">Fill in the details, then download the invoice as a PDF.</p>
-  <form id="f">
-    <div class="grid">
-      <label>Invoice number <input name="invoice_number" required /></label>
-      <label>Seller <input name="seller" required /></label>
-      <label>Buyer <input name="buyer" required /></label>
-      <label>Issue date <input type="date" name="issue_date" required /></label>
-      <label>Service date <input type="date" name="service_date" required /></label>
-      <label>Payment method <input name="payment_method" required /></label>
-      <label>Payment date <input type="date" name="payment_date" required /></label>
-      <label>Currency
-        <select name="currency"><option>SGD</option><option>USD</option><option>EUR</option><option>GBP</option></select>
-      </label>
-      <label>GST rate (%) <input type="number" name="gst_rate" min="0" max="100" step="0.1" required /></label>
+
+<div class="header">
+  <div>
+    <h1>Invoice Generator</h1>
+    <p class="muted">Create and manage multiple invoices.</p>
+  </div>
+  <button class="primary" id="newInvoice">
+    + Create New Invoice
+  </button>
+</div>
+
+<div class="invoice-layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <strong>My Invoices</strong>
+      <span id="invoiceCount" class="muted">0</span>
     </div>
+    <div id="invoiceList" class="invoice-list"></div>
+  </aside>
 
-    <h2>Items</h2>
-    <table>
-      <thead><tr><th>Item</th><th class="num">Quantity</th><th class="num">Unit price</th><th class="num">Amount</th><th></th></tr></thead>
-      <tbody id="rows"></tbody>
-    </table>
-    <button type="button" id="add" style="margin-top:8px">+ Add item</button>
-
-    <div class="totals">
-      <div><span>Subtotal</span><span id="t-sub">0.00</span></div>
-      <div><span>GST</span><span id="t-gst">0.00</span></div>
-      <div class="grand"><span>Total</span><span id="t-total">0.00</span></div>
+  <section class="editor" id="editor">
+    <div class="empty">
+      <h2>No invoices yet</h2>
+      <p>Create your first invoice to get started.</p>
+      <button class="primary" id="firstInvoice">
+        Create Invoice
+      </button>
     </div>
+  </section>
 
-    <div class="actions"><button type="submit" class="primary">Download PDF</button><span id="msg"></span></div>
-  </form>
+</div>
 </main>
-<script>
-function $(s, root = document) { return root.querySelector(s); }
-const form = $("#f"), rows = $("#rows");
 
-function addRow(item = { description: "", quantity: 1, unit_price: 0 }) {
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td><input class="d" required maxlength="200" /></td>
-    <td><input class="q num" type="number" min="0.01" step="any" required /></td>
-    <td><input class="p num" type="number" min="0" step="0.01" required /></td>
-    <td class="amt">0.00</td>
-    <td><button type="button" class="x" aria-label="Remove item">×</button></td>`;
-  $(".d", tr).value = item.description; $(".q", tr).value = item.quantity; $(".p", tr).value = item.unit_price;
-  tr.querySelector(".x").onclick = () => { if (rows.children.length > 1) { tr.remove(); recalc(); } };
-  rows.append(tr);
+<script>
+const $ = (s, root = document) => root.querySelector(s);
+
+const invoiceList = $("#invoiceList");
+const editor = $("#editor");
+
+let invoices = [];
+let activeId = null;
+let nextNumber = 1;
+
+function createInvoiceData() {
+  const number = String(nextNumber++).padStart(3, "0");
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return {
+    id: crypto.randomUUID(),
+    invoice_number: `INV-${number}`,
+    seller: "",
+    buyer: "",
+    issue_date: today,
+    service_date: today,
+    payment_method: "",
+    payment_date: today,
+    currency: "SGD",
+    gst_rate: 9,
+    items: [
+      {
+        description: "",
+        quantity: 1,
+        unit_price: 0
+      }
+    ]
+  };
 }
-function items() {
-  return [...rows.children].map((tr) => ({
-    description: $(".d", tr).value, quantity: +$(".q", tr).value, unit_price: +$(".p", tr).value,
+
+function currentInvoice() {
+  return invoices.find(i => i.id === activeId);
+}
+
+function money(value, currency) {
+  return new Intl.NumberFormat("en-SG", {
+    style: "currency",
+    currency
+  }).format(value || 0);
+}
+
+function calculate(invoice) {
+  const subtotal = invoice.items.reduce((sum, item) => {
+    return sum + (Number(item.quantity) || 0) *
+      (Number(item.unit_price) || 0);
+  }, 0);
+
+  const roundedSubtotal = Math.round(subtotal * 100) / 100;
+
+  const gst = Math.round(
+    roundedSubtotal * invoice.gst_rate / 100 * 100
+  ) / 100;
+
+  return {
+    subtotal: roundedSubtotal,
+    gst,
+    total: roundedSubtotal + gst
+  };
+}
+
+function createNewInvoice() {
+  const invoice = createInvoiceData();
+
+  invoices.push(invoice);
+  activeId = invoice.id;
+
+  render();
+}
+
+function selectInvoice(id) {
+  activeId = id;
+  render();
+}
+
+function deleteInvoice(id) {
+  const invoice = invoices.find(i => i.id === id);
+
+  if (!invoice) return;
+
+  if (!confirm(`Delete ${invoice.invoice_number}?`)) return;
+
+  invoices = invoices.filter(i => i.id !== id);
+
+  if (activeId === id) {
+    activeId = invoices.length
+      ? invoices[invoices.length - 1].id
+      : null;
+  }
+
+  render();
+}
+
+function duplicateInvoice(id) {
+  const original = invoices.find(i => i.id === id);
+  if (!original) return;
+
+  const copy = structuredClone(original);
+  const number = String(nextNumber++).padStart(3, "0");
+
+  copy.id = crypto.randomUUID();
+  copy.invoice_number = `INV-${number}`;
+
+  invoices.push(copy);
+  activeId = copy.id;
+
+  render();
+}
+
+function renderList() {
+  $("#invoiceCount").textContent = invoices.length;
+
+  invoiceList.innerHTML = "";
+
+  invoices.forEach(invoice => {
+    const tab = document.createElement("button");
+
+    tab.className = "invoice-tab" +
+      (invoice.id === activeId ? " active" : "");
+
+    const number = document.createElement("strong");
+    number.textContent = invoice.invoice_number;
+
+    const buyer = document.createElement("small");
+    buyer.textContent = invoice.buyer || "No buyer";
+
+    tab.append(number, buyer);
+
+    tab.onclick = () => selectInvoice(invoice.id);
+
+    invoiceList.append(tab);
+  });
+}
+
+function renderEditor() {
+  const invoice = currentInvoice();
+
+  if (!invoice) {
+    editor.innerHTML = `
+      <div class="empty">
+        <h2>No invoices yet</h2>
+        <p>Create your first invoice to get started.</p>
+        <button class="primary" id="firstInvoice">
+          Create Invoice
+        </button>
+      </div>
+    `;
+
+    $("#firstInvoice").onclick = createNewInvoice;
+    return;
+  }
+
+  editor.innerHTML = `
+    <div class="header">
+      <div>
+        <h2 style="margin:0">Invoice Details</h2>
+        <p class="muted" style="margin:4px 0 0">
+          ${escapeHTML(invoice.invoice_number)}
+        </p>
+      </div>
+
+      <div class="actions" style="margin:0">
+        <button type="button" id="duplicateInvoice">
+          Duplicate
+        </button>
+        <button type="button" class="danger" id="deleteInvoice">
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <form id="invoiceForm">
+
+      <div class="grid">
+
+        <label>Invoice number
+          <input name="invoice_number" required maxlength="50">
+        </label>
+
+        <label>Seller
+          <input name="seller" required maxlength="200">
+        </label>
+
+        <label>Buyer
+          <input name="buyer" required maxlength="200">
+        </label>
+
+        <label>Issue date
+          <input type="date" name="issue_date" required>
+        </label>
+
+        <label>Service date
+          <input type="date" name="service_date" required>
+        </label>
+
+        <label>Payment method
+          <input name="payment_method" required maxlength="100">
+        </label>
+
+        <label>Payment date
+          <input type="date" name="payment_date" required>
+        </label>
+
+        <label>Currency
+          <select name="currency">
+            <option value="SGD">SGD</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+          </select>
+        </label>
+
+        <label>GST rate (%)
+          <input type="number" name="gst_rate"
+            min="0" max="100" step="0.1" required>
+        </label>
+
+      </div>
+
+      <h2>Invoice Items</h2>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="num">Quantity</th>
+              <th class="num">Unit price</th>
+              <th class="num">Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="itemRows"></tbody>
+        </table>
+      </div>
+
+      <button type="button" id="addItem" style="margin-top:10px">
+        + Add Item
+      </button>
+
+      <div class="totals">
+        <div>
+          <span>Subtotal</span>
+          <span id="subtotal">0.00</span>
+        </div>
+
+        <div>
+          <span>GST</span>
+          <span id="gst">0.00</span>
+        </div>
+
+        <div class="grand">
+          <span>Total</span>
+          <span id="total">0.00</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="primary">
+          Download PDF
+        </button>
+      </div>
+
+      <div id="message" class="message"></div>
+
+    </form>
+  `;
+
+  const form = $("#invoiceForm");
+
+  // Populate invoice fields.
+  Object.entries(invoice).forEach(([key, value]) => {
+    if (key === "items" || key === "id") return;
+
+    if (form.elements[key]) {
+      form.elements[key].value = value;
+    }
+  });
+
+  renderItems();
+  recalculate();
+
+  form.addEventListener("input", () => {
+    saveFields();
+    recalculate();
+    renderList();
+  });
+
+  form.addEventListener("change", () => {
+    saveFields();
+    recalculate();
+    renderList();
+  });
+
+  $("#addItem").onclick = () => {
+    saveFields();
+
+    invoice.items.push({
+      description: "",
+      quantity: 1,
+      unit_price: 0
+    });
+
+    renderItems();
+    recalculate();
+  };
+
+  $("#deleteInvoice").onclick = () => {
+    deleteInvoice(invoice.id);
+  };
+
+  $("#duplicateInvoice").onclick = () => {
+    saveFields();
+    duplicateInvoice(invoice.id);
+  };
+
+  form.addEventListener("submit", downloadPDF);
+}
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function renderItems() {
+  const invoice = currentInvoice();
+  const tbody = $("#itemRows");
+
+  tbody.innerHTML = "";
+
+  invoice.items.forEach((item, index) => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>
+        <input class="description" maxlength="200"
+          required placeholder="Item description">
+      </td>
+
+      <td>
+        <input class="quantity num" type="number"
+          min="0.01" step="any" required>
+      </td>
+
+      <td>
+        <input class="price num" type="number"
+          min="0" step="0.01" required>
+      </td>
+
+      <td class="amt">0.00</td>
+
+      <td>
+        <button type="button" class="remove danger"
+          aria-label="Remove item">×</button>
+      </td>
+    `;
+
+    $(".description", tr).value = item.description;
+    $(".quantity", tr).value = item.quantity;
+    $(".price", tr).value = item.unit_price;
+
+    tr.querySelectorAll("input").forEach(input => {
+      input.addEventListener("input", () => {
+        saveItems();
+        recalculate();
+      });
+    });
+
+    $(".remove", tr).onclick = () => {
+      saveItems();
+
+      if (invoice.items.length <= 1) {
+        alert("An invoice must have at least one item.");
+        return;
+      }
+
+      invoice.items.splice(index, 1);
+
+      renderItems();
+      recalculate();
+    };
+
+    tbody.append(tr);
+  });
+}
+
+function saveFields() {
+  const invoice = currentInvoice();
+  const form = $("#invoiceForm");
+
+  if (!invoice || !form) return;
+
+  [
+    "invoice_number",
+    "seller",
+    "buyer",
+    "issue_date",
+    "service_date",
+    "payment_method",
+    "payment_date",
+    "currency"
+  ].forEach(key => {
+    invoice[key] = form.elements[key].value;
+  });
+
+  invoice.gst_rate =
+    Number(form.elements.gst_rate.value) || 0;
+}
+
+function saveItems() {
+  const invoice = currentInvoice();
+
+  if (!invoice) return;
+
+  invoice.items = [...$("#itemRows").children].map(tr => ({
+    description: $(".description", tr).value,
+    quantity: Number($(".quantity", tr).value),
+    unit_price: Number($(".price", tr).value)
   }));
 }
-function recalc() {
-  const rate = (+form.gst_rate.value || 0) / 100;
-  let sub = 0;
-  [...rows.children].forEach((tr) => {
-    const amt = Math.round(+$(".q", tr).value * +$(".p", tr).value * 100) / 100;
-    $(".amt", tr).textContent = amt.toFixed(2); sub += amt;
+
+function recalculate() {
+  const invoice = currentInvoice();
+  if (!invoice) return;
+
+  saveFields();
+  saveItems();
+
+  const totals = calculate(invoice);
+  const currency = invoice.currency;
+
+  [...$("#itemRows").children].forEach((tr, index) => {
+    const item = invoice.items[index];
+
+    const amount =
+      (Number(item.quantity) || 0) *
+      (Number(item.unit_price) || 0);
+
+    $(".amt", tr).textContent = money(
+      Math.round(amount * 100) / 100,
+      currency
+    );
   });
-  sub = Math.round(sub * 100) / 100;
-  const gst = Math.round(sub * rate * 100) / 100;
-  $("#t-sub").textContent = sub.toFixed(2); $("#t-gst").textContent = gst.toFixed(2); $("#t-total").textContent = (sub + gst).toFixed(2);
+
+  $("#subtotal").textContent =
+    money(totals.subtotal, currency);
+
+  $("#gst").textContent =
+    money(totals.gst, currency);
+
+  $("#total").textContent =
+    money(totals.total, currency);
 }
 
-form.addEventListener("input", recalc);
-$("#add").onclick = () => { addRow(); recalc(); };
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  $("#msg").textContent = "";
-  const body = Object.fromEntries(new FormData(form));
-  body.gst_rate = (+body.gst_rate || 0) / 100;
-  body.items = items();
-  const res = await fetch("/api/invoice-generator/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) { $("#msg").textContent = "Could not generate the PDF - check the fields."; return; }
-  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await res.blob()), download: `${body.invoice_number}.pdf` });
-  a.click(); URL.revokeObjectURL(a.href);
-});
+async function downloadPDF(event) {
+  event.preventDefault();
 
-(async () => {
-  const d = await (await fetch("/api/invoice-generator/defaults")).json();
-  for (const [k, v] of Object.entries(d)) if (form[k] && k !== "items") form[k].value = k === "gst_rate" ? v * 100 : v;
-  d.items.forEach(addRow); recalc();
-})();
+  const invoice = currentInvoice();
+  const form = $("#invoiceForm");
+  const message = $("#message");
+
+  saveFields();
+  saveItems();
+  recalculate();
+
+  if (!form.reportValidity()) return;
+
+  if (!invoice.items.every(item =>
+    item.description.trim() &&
+    Number.isFinite(item.quantity) &&
+    item.quantity > 0 &&
+    Number.isFinite(item.unit_price) &&
+    item.unit_price >= 0
+  )) {
+    message.textContent = "Please check your invoice items.";
+    return;
+  }
+
+  if (!invoice.invoice_number.trim()) {
+    message.textContent = "Invoice number is required.";
+    return;
+  }
+
+  const body = {
+    ...invoice,
+    gst_rate: invoice.gst_rate / 100
+  };
+
+  const button = form.querySelector('button[type="submit"]');
+
+  button.disabled = true;
+  button.textContent = "Generating PDF...";
+  message.textContent = "";
+
+  try {
+    const response = await fetch(
+      "/api/invoice-generator/pdf",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("PDF generation failed.");
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `${invoice.invoice_number}.pdf`;
+
+    document.body.append(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    message.textContent = "PDF downloaded successfully!";
+    message.style.color = "var(--success)";
+
+  } catch (error) {
+    message.textContent =
+      error.message || "Could not generate PDF.";
+
+    message.style.color = "var(--danger)";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Download PDF";
+  }
+}
+
+function render() {
+  renderList();
+  renderEditor();
+}
+
+$("#newInvoice").onclick = createNewInvoice;
+
+$("#firstInvoice").onclick = createNewInvoice;
+
+// Start with one invoice.
+createNewInvoice();
 </script>
+
 </body>
 </html>
