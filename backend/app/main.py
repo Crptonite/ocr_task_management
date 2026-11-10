@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app import store
 from app.services import supabase_store
-from app.routers import invoice_generator, invoices, orders, planning, projects
+from app.routers import invoice_generator, invoice_queue, invoices, orders, planning, projects
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
@@ -35,6 +35,7 @@ app.add_middleware(
 app.include_router(invoices.router)  # Koda: invoice checking
 app.include_router(invoice_generator.router)  # standalone invoice generator
 app.include_router(orders.router)    # Spectra: order automation
+app.include_router(invoice_queue.router)  # Spectra: review invoice queue for approved orders
 app.include_router(projects.router)  # EM Services: project tracker
 app.include_router(planning.router)  # Koda: material requirements and production priorities
 
