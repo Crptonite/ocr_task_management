@@ -37,6 +37,7 @@ app.include_router(documents.router)  # combined document list + CSV
 app.include_router(invoices.router)  # Koda: invoice checking
 app.include_router(invoice_generator.router)  # standalone invoice generator
 app.include_router(orders.router)    # Spectra: order automation
+app.include_router(invoice_queue.router)  # Spectra: review invoice queue for approved orders
 app.include_router(projects.router)  # EM Services: project tracker
 app.include_router(planning.router)  # Koda: material requirements and production priorities
 

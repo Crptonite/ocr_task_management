@@ -11,6 +11,78 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const label = (s) => s.replace(/_/g, " ");
 const setStat = (key, val) => ($(`[data-stat="${key}"]`).textContent = val);
 
+// Prevent browser Caret Browsing / text cursor on non-input elements.
+const isEditable = (el) => el && el.closest?.("input, textarea, select, [contenteditable='true']");
+addEventListener("mousedown", (e) => {
+  if (!isEditable(e.target)) getSelection()?.removeAllRanges();
+});
+addEventListener("keydown", (e) => {
+  if (!isEditable(document.activeElement) && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+    getSelection()?.removeAllRanges();
+  }
+});
+
+// Custom themed modal (confirm & notice)
+let modalResolve = null;
+function closeModal(result) {
+  const modal = $("#confirm-modal");
+  if (!modal || modal.hidden) return;
+  modal.hidden = true;
+  if (modalResolve) {
+    const r = modalResolve;
+    modalResolve = null;
+    r(result);
+  }
+}
+
+function confirmModal({ eyebrow = "Confirm", title, message, confirmText = "Confirm", cancelText = "Cancel", danger = false, noticeOnly = false }) {
+  const modal = $("#confirm-modal");
+  if (!modal) return Promise.resolve(true);
+  $("#modal-eyebrow").textContent = eyebrow;
+  $("#modal-title").textContent = title;
+  $("#modal-message").textContent = message;
+  const cancelBtn = $("#modal-cancel");
+  const confirmBtn = $("#modal-confirm");
+  cancelBtn.hidden = noticeOnly;
+  cancelBtn.textContent = cancelText;
+  confirmBtn.textContent = confirmText;
+  confirmBtn.className = `btn ${danger ? "btn-danger" : "btn-solid"}`;
+  modal.hidden = false;
+  confirmBtn.focus();
+  return new Promise((resolve) => {
+    modalResolve = resolve;
+  });
+}
+
+function noticeModal(title, message, eyebrow = "Notice") {
+  return confirmModal({ eyebrow, title, message, confirmText: "OK", noticeOnly: true });
+}
+
+$("#modal-cancel")?.addEventListener("click", () => closeModal(false));
+$("#modal-confirm")?.addEventListener("click", () => closeModal(true));
+$("#confirm-modal")?.addEventListener("click", (e) => {
+  if (e.target.id === "confirm-modal") closeModal(false);
+});
+addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("#confirm-modal")?.hidden) closeModal(false);
+});
+
+async function confirmAndDownload(url, labelText) {
+  const ok = await confirmModal({
+    eyebrow: "Confirm Download",
+    title: `Download ${labelText}?`,
+    message: "The file will be generated and downloaded to your device.",
+    confirmText: "Download",
+  });
+  if (!ok) return;
+  const a = document.createElement("a");
+  a.href = url;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 // Theme
 $("#theme-toggle")?.addEventListener("click", () => {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
@@ -162,10 +234,12 @@ function renderInvoiceDetail(inv) {
     <p style="margin-top:1rem" class="num"><strong>${money(inv.total, inv.currency)}</strong></p>
     ${
       inv.file_path
-        ? `<a class="btn btn-outline" style="margin-top:1rem" target="_blank" rel="noopener"
-             href="${API}/api/invoices/${encodeURIComponent(inv.invoice_number)}/file">Open PDF</a>`
+        ? `<button type="button" class="btn btn-outline" style="margin-top:1rem" id="open-invoice-pdf">Open PDF</button>`
         : ""
     }`;
+  $("#open-invoice-pdf")?.addEventListener("click", () =>
+    confirmAndDownload(`${API}/api/invoices/${encodeURIComponent(inv.invoice_number)}/file`, `${inv.invoice_number}.pdf`)
+  );
 }
 
 function renderInvoices(invoices) {
@@ -200,13 +274,20 @@ const trashButton = (kind, id) =>
   </button>`;
 
 async function deleteRecord(path, name) {
-  if (!confirm(`Delete ${name}? This cannot be undone until the server restarts and reloads its sample data.`)) return;
+  const ok = await confirmModal({
+    eyebrow: "Confirm Delete",
+    title: `Delete ${name}?`,
+    message: "This record will be removed from the workspace until the server restarts and reloads sample data.",
+    confirmText: "Delete",
+    danger: true,
+  });
+  if (!ok) return;
   try {
     await api(path, { method: "DELETE" });
     await loadInvoices();
     $("#invoice-detail").innerHTML = `<p class="muted">No invoice selected.</p>`;
   } catch (err) {
-    alert(err.message);
+    await noticeModal("Delete failed", err.message);
   }
 }
 
@@ -225,8 +306,8 @@ function renderPurchaseOrders(orders, variants) {
         <div class="po-invoice">
           <select aria-label="Invoice variant">${options}</select>
           <div class="actions">
-            <a class="btn btn-outline btn-sm" data-action="download">Invoice PDF</a>
-            <button class="btn btn-outline btn-sm" data-action="upload">Upload it</button>
+            <button type="button" class="btn btn-outline btn-sm" data-action="download">Invoice PDF</button>
+            <button type="button" class="btn btn-outline btn-sm" data-action="upload">Upload it</button>
           </div>
         </div></div>`
     )
@@ -236,13 +317,24 @@ function renderPurchaseOrders(orders, variants) {
     $("[data-trash=po]", card).addEventListener("click", () =>
       deleteRecord(`/api/purchase-orders/${encodeURIComponent(card.dataset.po)}`, `purchase order ${card.dataset.po}`)
     );
-    $("[data-action=download]", card).addEventListener("click", (e) => (e.currentTarget.href = pdfUrl()));
-    $("[data-action=upload]", card).addEventListener("click", (e) => uploadGeneratedPdf(pdfUrl(), e.currentTarget));
+    $("[data-action=download]", card).addEventListener("click", () =>
+      confirmAndDownload(pdfUrl(), `invoice PDF for ${card.dataset.po} (${$("select", card).value})`)
+    );
+    $("[data-action=upload]", card).addEventListener("click", (e) =>
+      uploadGeneratedPdf(pdfUrl(), e.currentTarget, `invoice for ${card.dataset.po} (${$("select", card).value})`)
+    );
   });
 }
 
 // Same path as a manual upload: fetch the generated PDF, then post it to the upload endpoint.
-async function uploadGeneratedPdf(url, btn) {
+async function uploadGeneratedPdf(url, btn, description = "generated invoice PDF") {
+  const ok = await confirmModal({
+    eyebrow: "Confirm Upload",
+    title: `Upload ${description}?`,
+    message: "The invoice PDF will be generated, extracted by the server, and added to the review queue.",
+    confirmText: "Upload",
+  });
+  if (!ok) return;
   btn.disabled = true;
   try {
     const res = await fetch(url);
@@ -294,10 +386,17 @@ function updateProductHint(resetQty) {
 }
 
 $("#pi-product")?.addEventListener("change", () => updateProductHint(true));
-$("#pi-download")?.addEventListener("click", (e) => (e.currentTarget.href = productInvoiceUrl()));
+$("#pi-download")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  const sku = $("#pi-product").value;
+  const variant = $("#pi-variant").value;
+  confirmAndDownload(productInvoiceUrl(), `invoice PDF for ${sku} (${variant})`);
+});
 $("#product-invoice")?.addEventListener("submit", (e) => {
   e.preventDefault();
-  uploadGeneratedPdf(productInvoiceUrl(), $("button[type=submit]", e.currentTarget));
+  const sku = $("#pi-product").value;
+  const variant = $("#pi-variant").value;
+  uploadGeneratedPdf(productInvoiceUrl(), $("button[type=submit]", e.currentTarget), `invoice for ${sku} (${variant})`);
 });
 
 let invoices = [];
@@ -401,7 +500,7 @@ function renderOrderDetail(o) {
       await api(`/api/orders/${o.id}/approve`, { method: "POST" });
       await loadOrders();
     } catch (err) {
-      alert(err.message);
+      await noticeModal("Approval failed", err.message);
     }
   });
 }
@@ -446,7 +545,7 @@ function renderOrderEditor(o) {
       await api(`/api/orders/${o.id}`, { method: "PATCH", body: JSON.stringify(body) });
       await loadOrders();
     } catch (err) {
-      alert(err.message);
+      await noticeModal("Save failed", err.message);
     }
   });
 }
@@ -487,7 +586,14 @@ function renderOrders() {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
       const id = btn.closest("tr").dataset.id;
-      if (!confirm(`Delete order ${btn.dataset.id}? This cannot be undone until the server restarts and reloads its sample data.`)) return;
+      const ok = await confirmModal({
+        eyebrow: "Confirm Delete",
+        title: `Delete order ${btn.dataset.id}?`,
+        message: "This order will be removed from the queue until the server restarts.",
+        confirmText: "Delete",
+        danger: true,
+      });
+      if (!ok) return;
       try {
         await api(`/api/orders/${id}`, { method: "DELETE" });
         if (selectedOrderId === id) {
@@ -496,7 +602,7 @@ function renderOrders() {
         }
         await loadOrders();
       } catch (err) {
-        alert(err.message);
+        await noticeModal("Delete failed", err.message);
       }
     })
   );
@@ -509,7 +615,11 @@ async function loadOrders() {
   renderOrders();
 }
 
-$("#export-orders")?.addEventListener("click", () => setTimeout(loadOrders, 800));
+$("#export-orders")?.addEventListener("click", async (e) => {
+  e.preventDefault();
+  await confirmAndDownload(e.currentTarget.href, "approved orders (orders.csv)");
+  setTimeout(loadOrders, 800);
+});
 
 /* ---------- EM Services: projects ---------- */
 
@@ -590,7 +700,14 @@ async function updateTask(id, changes) {
 }
 
 async function deleteTask(id) {
-  if (!confirm("Delete this task?")) return;
+  const ok = await confirmModal({
+    eyebrow: "Confirm Delete",
+    title: "Delete this task?",
+    message: "The task will be permanently removed from the project board.",
+    confirmText: "Delete",
+    danger: true,
+  });
+  if (!ok) return;
   await api(`/api/tasks/${id}`, { method: "DELETE" });
   await refreshProjects();
 }
@@ -681,12 +798,83 @@ $$("form[data-upload]").forEach((form) => {
   const fileInput = $("input[type=file]", form);
   const out = form.nextElementSibling;
   const button = $('button[type="submit"]', form);
+  const lbl = $("label", form);
+  const defaultLabelHtml = lbl ? lbl.innerHTML : "<strong>Choose a file</strong> or drag it here";
+
+  async function processSelectedFile(file) {
+    if (!file) return;
+    const allowedMimeTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+    const isPdfOrImage = allowedMimeTypes.includes(file.type) || /\.(pdf|jpe?g|png|webp)$/i.test(file.name);
+    if (!isPdfOrImage) {
+      out.hidden = false;
+      out.textContent = "Only PDF, JPG, PNG and WEBP files are supported.";
+      return;
+    }
+
+    const ok = await confirmModal({
+      eyebrow: "Confirm Upload",
+      title: `Upload ${file.name}?`,
+      message: "This document will be sent to the server for field extraction and validation.",
+      confirmText: "Upload",
+    });
+    if (!ok) return;
+
+    const body = new FormData();
+    body.append("file", file);
+
+    out.hidden = false;
+    out.textContent = "Uploading and extracting document...";
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Processing...";
+    }
+
+    try {
+      const res = await fetch(API + form.dataset.upload, {
+        method: "POST",
+        body,
+      });
+
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(result.detail || result.error || res.statusText);
+      }
+
+      if ("invoice" in result) {
+        await afterInvoiceUpload(result);
+      } else if (result.order) {
+        await afterOrderUpload(result);
+      } else {
+        out.textContent =
+          (result.draft?.note || "Document uploaded, but extraction was incomplete.") +
+          "\n" +
+          JSON.stringify(result.draft || result, null, 2);
+      }
+
+      fileInput.value = "";
+      if (lbl) lbl.innerHTML = defaultLabelHtml;
+    } catch (err) {
+      out.textContent = `Upload failed: ${err.message}\n${OFFLINE_HINT}`;
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Upload";
+      }
+    }
+  }
 
   fileInput.addEventListener("change", () => {
-    const lbl = $("label", form);
+    const file = fileInput.files[0];
     if (lbl) {
-      lbl.textContent = fileInput.files[0]?.name || "Choose a file";
+      lbl.innerHTML = file ? `<strong>${esc(file.name)}</strong>` : defaultLabelHtml;
     }
+    if (file) processSelectedFile(file);
+  });
+
+  // Clicking anywhere on the empty part of the dashed box opens the file picker.
+  form.addEventListener("click", (e) => {
+    if (e.target === form) fileInput.click();
   });
 
   ["dragover", "dragleave", "drop"].forEach((evt) => {
@@ -703,75 +891,12 @@ $$("form[data-upload]").forEach((form) => {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     const file = fileInput.files[0];
-
     if (!file) {
-      out.hidden = false;
-      out.textContent = "Please select a file first.";
+      fileInput.click();
       return;
     }
-
-    const allowedMimeTypes = [
-      "application/pdf",
-      "image/jpeg",
-      "image/png",
-      "image/webp"
-    ];
-
-    const isPdfOrImage = allowedMimeTypes.includes(file.type) || /\.(pdf|jpe?g|png|webp)$/i.test(file.name);
-
-    if (!isPdfOrImage) {
-      out.hidden = false;
-      out.textContent = "Only PDF, JPG, PNG and WEBP files are supported.";
-      return;
-    }
-
-    const body = new FormData();
-    body.append("file", file);
-
-    out.hidden = false;
-    out.textContent = "Uploading and extracting document...";
-
-    if (button) {
-      button.disabled = true;
-      button.textContent = "Processing...";
-    }
-
-    try {
-      const res = await fetch(API + form.dataset.upload, {
-        method: "POST",
-        body
-      });
-
-      const result = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(
-          result.detail || result.error || res.statusText
-        );
-      }
-
-      if ("invoice" in result) {
-        await afterInvoiceUpload(result);
-      } else if (result.order) {
-        await afterOrderUpload(result);
-      } else {
-        out.textContent =
-          (result.draft?.note || "Document uploaded, but extraction was incomplete.") +
-          "\n" +
-          JSON.stringify(result.draft || result, null, 2);
-      }
-
-    } catch (err) {
-      out.textContent = `Upload failed: ${err.message}\n${OFFLINE_HINT}`;
-
-    } finally {
-      if (button) {
-        button.disabled = false;
-        button.textContent = "Upload";
-      }
-    }
+    await processSelectedFile(file);
   });
 });
 

@@ -30,6 +30,7 @@ def render_generated_invoice(inv: dict) -> bytes:
     pdf.ln(6)
 
     top = pdf.get_y()
+    bottom = top + 22
     for x, heading, name in [(18, "From", inv["seller"]), (105, "Bill to", inv["buyer"])]:
         pdf.set_xy(x, top)
         pdf.set_font("Helvetica", "B", 9)
@@ -39,7 +40,8 @@ def render_generated_invoice(inv: dict) -> bytes:
         pdf.set_font("Helvetica", "B", 11)
         pdf.set_text_color(0)
         pdf.multi_cell(80, 6, name)
-    pdf.set_y(top + 22)
+        bottom = max(bottom, pdf.get_y() + 4)
+    pdf.set_y(bottom)
 
     pdf.set_font("Helvetica", "", 10)
     for label, value in [
@@ -48,6 +50,7 @@ def render_generated_invoice(inv: dict) -> bytes:
         ("Payment method", inv["payment_method"]),
         ("Payment date", inv["payment_date"]),
         ("Currency", f"{inv['currency']} ({sym.strip()})"),
+        *([("Reference", inv["references"])] if inv.get("references") else []),
     ]:
         pdf.set_font("Helvetica", "B", 10)
         pdf.cell(40, 6, label)

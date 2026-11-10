@@ -1,0 +1,8 @@
+Document,Type,Company,Date,Amount,Status,Currency
+HHE-30551,Invoice,Hanoi Hardwood Exports,2026-10-19,6228.00,matched,USD
+DTW-7742,Invoice,Danang Textile Works,2026-10-23,2408.00,mismatch,USD
+TFF-5108,Invoice,Tuas Fasteners & Finishes,2026-10-25,2415.00,mismatch,SGD
+SO-24017,Sales order,Tampines Polyclinic IT,2026-10-21,11190.00,needs_attention,SGD
+PO-SP-0931,Purchase order,Ingram Micro Asia,2026-10-23,14040.00,ready,USD
+SO-24022,Sales order,Woodlands Logistics Pte Ltd,2026-10-26,3500.00,needs_attention,SGD
+ord-4,Sales order,Bedok North Secondary School,2026-10-27,2934.00,needs_attention,SGD

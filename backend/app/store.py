@@ -27,6 +27,7 @@ def reset() -> None:
     orders.update(_load("mock_orders.json"))
     for i, order in enumerate(orders["orders"], start=1):
         order.setdefault("id", f"ord-{i}")
+        order.setdefault("transaction_id", f"TXN-{i:05d}")
     projects.clear()
     projects.update(_load("mock_projects.json"))
     planning.clear()
