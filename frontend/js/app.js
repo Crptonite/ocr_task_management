@@ -133,6 +133,24 @@ sidebarToggleBtn?.addEventListener("click", () => {
 });
 sidebarScrim?.addEventListener("click", closeMobileSidebar);
 
+function triggerSearchAction() {
+  const currentTab = $(".nav nav a.active")?.dataset.tab || "orders";
+  if (currentTab === "orders") {
+    $("#intake-raw-text")?.focus();
+    $("#intake-raw-text")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  } else {
+    location.hash = "#orders/intake";
+    setTimeout(() => $("#intake-raw-text")?.focus(), 150);
+  }
+}
+$("#nav-search-btn")?.addEventListener("click", triggerSearchAction);
+window.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    triggerSearchAction();
+  }
+});
+
 $$("[data-toggle-group]").forEach((btn) =>
   btn.addEventListener("click", (e) => {
     e.stopPropagation();

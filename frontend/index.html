@@ -28,6 +28,14 @@
       <a href="#orders/intake" class="logo">KODA</a>
       <span class="nav-tag">6a · 6b Ops Desk</span>
     </div>
+    <div class="nav-search-trigger" id="nav-search-btn" role="button" tabindex="0" title="Quick feature search (Ctrl+K)">
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="8.5" cy="8.5" r="5.5" />
+        <path d="M13 13l4 4" stroke-linecap="round" />
+      </svg>
+      <span class="nav-search-placeholder">Search workspace features &amp; SKUs...</span>
+      <kbd class="nav-search-kbd">Ctrl K</kbd>
+    </div>
     <nav>
       <a href="#documents" data-tab="documents">Documents</a>
       <a href="#invoices" data-tab="invoices">Invoices</a>
@@ -53,89 +61,96 @@
     <div class="sidebar-scrim" id="sidebar-scrim" hidden></div>
     <aside class="sidebar" id="sidebar" aria-label="Workspace features">
       <div class="sidebar-inner">
-        <p class="sidebar-kicker">Workspace</p>
-
-        <div class="sb-group" data-group="orders">
-          <div class="sb-parent-row">
-            <a href="#orders" class="sb-parent" data-tab="orders">Orders <span class="sb-badge">6a</span></a>
-            <button type="button" class="sb-chev" data-toggle-group="orders" aria-label="Expand Orders"
-              aria-expanded="true">
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
-                <path d="M4 6l4 4 4-4" />
-              </svg>
-            </button>
-          </div>
-          <div class="sb-children">
-            <a href="#orders/intake" class="sb-child" data-nav="orders" data-section="ord-intake">PO Intake &amp; Validation</a>
-            <a href="#orders/queue" class="sb-child" data-nav="orders" data-section="ord-queue">Order Queue</a>
-            <a href="#orders/upload" class="sb-child" data-nav="orders" data-section="ord-upload">Quick File Upload</a>
-          </div>
-        </div>
-
-        <div class="sb-group" data-group="documents">
-          <div class="sb-parent-row">
-            <a href="#documents" class="sb-parent" data-tab="documents">Documents</a>
-            <button type="button" class="sb-chev" data-toggle-group="documents" aria-label="Expand Documents"
-              aria-expanded="false">
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
-                <path d="M4 6l4 4 4-4" />
-              </svg>
-            </button>
-          </div>
-          <div class="sb-children">
-            <a href="#documents/all" class="sb-child" data-nav="documents" data-section="doc-all">All Documents &amp; CSV</a>
+        <div class="sidebar-section">
+          <p class="sidebar-kicker">Operations</p>
+          <div class="sb-group open" data-group="orders">
+            <div class="sb-parent-row active">
+              <a href="#orders/intake" class="sb-parent" data-tab="orders">Orders <span class="sb-badge">6a</span></a>
+              <button type="button" class="sb-chev" data-toggle-group="orders" aria-label="Expand Orders"
+                aria-expanded="true">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M4 6l4 4 4-4" />
+                </svg>
+              </button>
+            </div>
+            <div class="sb-children">
+              <a href="#orders/intake" class="sb-child active" data-nav="orders" data-section="ord-intake">PO Intake &amp; Validation</a>
+              <a href="#orders/queue" class="sb-child" data-nav="orders" data-section="ord-queue">Order Queue</a>
+              <a href="#orders/upload" class="sb-child" data-nav="orders" data-section="ord-upload">Quick File Upload</a>
+            </div>
           </div>
         </div>
 
-        <div class="sb-group" data-group="invoices">
-          <div class="sb-parent-row">
-            <a href="#invoices" class="sb-parent" data-tab="invoices">Invoices <span class="sb-badge">6b</span></a>
-            <button type="button" class="sb-chev" data-toggle-group="invoices" aria-label="Expand Invoices"
-              aria-expanded="false">
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
-                <path d="M4 6l4 4 4-4" />
-              </svg>
-            </button>
+        <div class="sidebar-section">
+          <p class="sidebar-kicker">Finance &amp; Documents</p>
+          <div class="sb-group" data-group="documents">
+            <div class="sb-parent-row">
+              <a href="#documents" class="sb-parent" data-tab="documents">Documents</a>
+              <button type="button" class="sb-chev" data-toggle-group="documents" aria-label="Expand Documents"
+                aria-expanded="false">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M4 6l4 4 4-4" />
+                </svg>
+              </button>
+            </div>
+            <div class="sb-children">
+              <a href="#documents/all" class="sb-child" data-nav="documents" data-section="doc-all">All Documents &amp; CSV</a>
+            </div>
           </div>
-          <div class="sb-children">
-            <a href="#invoices/queue" class="sb-child" data-nav="invoices" data-section="inv-queue">Review Queue</a>
-            <a href="#invoices/pos" class="sb-child" data-nav="invoices" data-section="inv-pos">Purchase Orders</a>
-            <a href="#invoices/create" class="sb-child" data-nav="invoices" data-section="inv-create">Create Invoice</a>
-            <a href="#invoices/upload" class="sb-child" data-nav="invoices" data-section="inv-upload">Upload Invoice</a>
-            <a href="invoice-generator.html" class="sb-child">Invoice Generator Page ↗</a>
+
+          <div class="sb-group" data-group="invoices">
+            <div class="sb-parent-row">
+              <a href="#invoices" class="sb-parent" data-tab="invoices">Invoices <span class="sb-badge">6b</span></a>
+              <button type="button" class="sb-chev" data-toggle-group="invoices" aria-label="Expand Invoices"
+                aria-expanded="false">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M4 6l4 4 4-4" />
+                </svg>
+              </button>
+            </div>
+            <div class="sb-children">
+              <a href="#invoices/queue" class="sb-child" data-nav="invoices" data-section="inv-queue">Review Queue</a>
+              <a href="#invoices/pos" class="sb-child" data-nav="invoices" data-section="inv-pos">Purchase Orders</a>
+              <a href="#invoices/create" class="sb-child" data-nav="invoices" data-section="inv-create">Create Invoice</a>
+              <a href="#invoices/upload" class="sb-child" data-nav="invoices" data-section="inv-upload">Upload Invoice</a>
+              <a href="invoice-generator.html" class="sb-child">Invoice Generator Page ↗</a>
+            </div>
           </div>
         </div>
 
-        <div class="sb-group" data-group="projects">
-          <div class="sb-parent-row">
-            <a href="#projects" class="sb-parent" data-tab="projects">Projects</a>
-            <button type="button" class="sb-chev" data-toggle-group="projects" aria-label="Expand Projects"
-              aria-expanded="false">
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
-                <path d="M4 6l4 4 4-4" />
-              </svg>
-            </button>
+        <div class="sidebar-section">
+          <p class="sidebar-kicker">Manufacturing &amp; Planning</p>
+          <div class="sb-group" data-group="projects">
+            <div class="sb-parent-row">
+              <a href="#projects" class="sb-parent" data-tab="projects">Projects</a>
+              <button type="button" class="sb-chev" data-toggle-group="projects" aria-label="Expand Projects"
+                aria-expanded="false">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M4 6l4 4 4-4" />
+                </svg>
+              </button>
+            </div>
+            <div class="sb-children">
+              <a href="#projects/list" class="sb-child" data-nav="projects" data-section="prj-list">Projects Overview</a>
+              <a href="#projects/board" class="sb-child" data-nav="projects" data-section="project-board">Task Board</a>
+            </div>
           </div>
-          <div class="sb-children">
-            <a href="#projects/list" class="sb-child" data-nav="projects" data-section="prj-list">Projects Overview</a>
-            <a href="#projects/board" class="sb-child" data-nav="projects" data-section="project-board">Task Board</a>
-          </div>
-        </div>
 
-        <div class="sb-group" data-group="planning">
-          <div class="sb-parent-row">
-            <a href="#planning" class="sb-parent" data-tab="planning">Planning <span class="sb-badge">6c</span></a>
-            <button type="button" class="sb-chev" data-toggle-group="planning" aria-label="Expand Planning"
-              aria-expanded="false">
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
-                <path d="M4 6l4 4 4-4" />
-              </svg>
-            </button>
-          </div>
-          <div class="sb-children">
-            <a href="#planning/build" class="sb-child" data-nav="planning" data-section="pln-build">Suggested Build Order</a>
-            <a href="#planning/materials" class="sb-child" data-nav="planning" data-section="pln-materials">Material Requirements</a>
-            <a href="#planning/purchases" class="sb-child" data-nav="planning" data-section="pln-purchases">Purchase Suggestions</a>
+          <div class="sb-group" data-group="planning">
+            <div class="sb-parent-row">
+              <a href="#planning" class="sb-parent" data-tab="planning">Planning <span class="sb-badge">6c</span></a>
+              <button type="button" class="sb-chev" data-toggle-group="planning" aria-label="Expand Planning"
+                aria-expanded="false">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M4 6l4 4 4-4" />
+                </svg>
+              </button>
+            </div>
+            <div class="sb-children">
+              <a href="#planning/build" class="sb-child" data-nav="planning" data-section="pln-build">Suggested Build Order</a>
+              <a href="#planning/materials" class="sb-child" data-nav="planning" data-section="pln-materials">Material Requirements</a>
+              <a href="#planning/purchases" class="sb-child" data-nav="planning" data-section="pln-purchases">Purchase Suggestions</a>
+            </div>
           </div>
         </div>
       </div>
@@ -299,7 +314,13 @@
           <section class="block" id="ord-intake">
             <div class="block-head row">
               <div>
-                <p class="section-tag">6a · Customer PO Intake</p>
+                <nav class="breadcrumb-trail" aria-label="Breadcrumb">
+                  <span>OPERATIONS (6A)</span>
+                  <span class="bc-sep">›</span>
+                  <span>ORDERS</span>
+                  <span class="bc-sep">›</span>
+                  <span class="bc-current">PO INTAKE &amp; VALIDATION STUDIO</span>
+                </nav>
                 <h2>PO Intake &amp; Validation</h2>
                 <p class="muted">Upload a customer PO file or paste email/CSV text. Deterministic rules run first; fuzzy SKU matching catches 1-character typos and missing shipping fields before queue entry.</p>
               </div>
