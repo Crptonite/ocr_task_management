@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --font: "Montserrat", system-ui, sans-serif;
   --radius: 2px;
   --ok: #4f8a5b;
@@ -158,6 +158,27 @@ a { color: inherit; text-decoration: none; }
 .dropzone input { display: none; }
 .dropzone label { cursor: pointer; color: var(--muted); }
 .dropzone label strong { color: var(--text); font-weight: 500; }
+.text-link { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.dropzone-actions { display: flex; flex-wrap: wrap; gap: .8rem; justify-content: center; }
+
+/* Camera scanner */
+.modal-box.scanner-box { max-width: 760px; padding: 1.4rem 1.6rem; max-height: calc(100dvh - 2rem); overflow: auto; }
+.modal-backdrop.scanner { grid-template-columns: minmax(0, 760px); justify-content: center; }
+.scanner-stage { overflow: hidden; display: grid; place-items: center; background: #000; border: 1px solid var(--line); position: relative; min-height: 220px; }
+.scanner-stage[hidden] { display: none; }
+.scanner-stage video { width: 100%; max-height: 58vh; object-fit: contain; display: block; }
+.scanner-stage canvas { display: block; touch-action: none; }
+.scanner-guide { position: absolute; inset: 8%; border: 2px dashed rgba(200, 162, 122, .8); pointer-events: none; }
+.scanner-hint { margin-top: .8rem; font-size: .82rem; }
+.scanner-actions { flex-wrap: wrap; margin-top: 1rem; }
+.scanner-actions .btn[hidden] { display: none; }
+.scanner-spacer { flex: 1; }
+@media (max-width: 560px) {
+  .modal-backdrop.scanner { padding: .5rem; }
+  .modal-box.scanner-box { padding: 1rem; }
+  .scanner-actions .btn { flex: 1 1 40%; padding: .7rem .6rem; }
+  .scanner-spacer { display: none; }
+}
 .result { margin-top: 1rem; background: var(--surface); border: 1px solid var(--line); padding: 1rem; font-size: .8rem; overflow: auto; }
 
 /* Tabs */
@@ -232,8 +253,15 @@ input:not([type=checkbox]):not([type=file]), select {
 .footer { display: flex; justify-content: space-between; align-items: center; padding: 3rem; margin-top: 4rem; border-top: 1px solid var(--line); }
 
 @media (max-width: 860px) {
-  .nav { padding: 1.2rem 1.4rem; }
+  .nav, .nav.scrolled { padding: 1.2rem 1.4rem; }
   .nav nav { gap: 1rem; font-size: .8rem; }
+}
+@media (max-width: 480px) {
+  .nav, .nav.scrolled { padding: 1rem; gap: .6rem; }
+  .nav .logo { letter-spacing: .2em; }
+  .split > *, .hero-inner { min-width: 0; max-width: 100%; }
+  .table { display: block; overflow-x: auto; }
+  .nav nav { gap: .7rem; font-size: .72rem; }
   .split, .board { grid-template-columns: 1fr; }
   .task-form { margin-left: 0; }
   .stats { grid-template-columns: repeat(2, 1fr); }
@@ -249,3 +277,89 @@ input:not([type=checkbox]):not([type=file]), select {
 .table .filters th { padding: .3rem .8rem .8rem; text-transform: none; letter-spacing: 0; }
 .table .filters select { width: 100%; font-size: .78rem; padding: .3rem .4rem; }
 #documents-table tbody tr { cursor: default; }
+/* Custom confirmation modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, .62);
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+[data-theme="light"] .modal-backdrop {
+  background: rgba(22, 21, 20, .38);
+}
+.modal-backdrop[hidden] {
+  display: none;
+}
+.modal-box {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 2rem 2.2rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
+}
+.modal-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: .24em;
+  font-size: .68rem;
+  color: var(--accent);
+  margin-bottom: .5rem;
+}
+.modal-box h3 {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: .04em;
+  margin-bottom: .6rem;
+}
+.modal-box #modal-message {
+  line-height: 1.55;
+  word-break: break-word;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .8rem;
+  margin-top: 1.8rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+}
+.modal-actions .btn {
+  padding: .65rem 1.5rem;
+  font-size: .7rem;
+}
+
+/* Order approval and invoice review */
+.pill.rejected { color: var(--bad); }
+.pill.pending { color: var(--warn); }
+.pill.generated { color: var(--accent); }
+.admin-field { display: inline-flex; align-items: center; gap: .5rem; font-size: .8rem; }
+.admin-field input { padding: .45rem .6rem; font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; width: 11rem; }
+.audit { margin-top: 1rem; font-size: .82rem; padding: .6rem .8rem; border-left: 2px solid var(--line); }
+.audit.approved { border-color: var(--ok); }
+.audit.rejected { border-color: var(--bad); }
+.reject-box textarea, .edit-field textarea { width: 100%; margin-top: .4rem; padding: .4rem .5rem; font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; resize: vertical; }
+.ref-grid { display: grid; grid-template-columns: auto 1fr; gap: .2rem 1rem; margin-top: .8rem; font-size: .82rem; }
+.ref-grid dt { color: var(--muted); }
+.iq-items { display: grid; gap: .6rem; margin: .6rem 0; }
+.iq-item { border: 1px solid var(--line); border-radius: 8px; padding: .6rem; display: grid; gap: .4rem; }
+.iq-item input { width: 100%; min-width: 0; padding: .35rem .5rem; font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; }
+.iq-item-head { display: flex; gap: .4rem; align-items: center; }
+.iq-item-head input { font-weight: 600; }
+.iq-item-row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; font-size: .85rem; }
+.iq-item .qty { display: flex; gap: .25rem; align-items: center; }
+.iq-item .qty input { width: 4.2rem; text-align: right; }
+.iq-item .qty .btn-sm { padding: .3rem .55rem; }
+.iq-item .price { display: flex; gap: .3rem; align-items: center; color: var(--muted); }
+.iq-item .price input { width: 6.5rem; text-align: right; }
+.iq-item .amount { margin-left: auto; font-weight: 600; white-space: nowrap; }
+.iq-totals { margin-top: .8rem; display: grid; grid-template-columns: 1fr auto; gap: .3rem 1rem; font-size: .88rem; }
+.iq-totals .grand { font-weight: 700; font-size: 1rem; }
+.detail .actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+.edit-field select { width: 100%; padding: .35rem .5rem; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.iq-item [name=sku] { font-size: .78rem; }
+#order-form .invalid { border-color: var(--bad) !important; }

@@ -82,15 +82,15 @@
       <section class="block">
         <div class="block-head">
           <h2>Review queue</h2>
-          <p class="muted">Select an invoice to see how it compares with its purchase order.</p>
+          <p class="muted">Approved transactions waiting for their invoice, then supplier invoices. Select one to review it.</p>
         </div>
         <div class="split">
           <table class="table">
             <thead>
               <tr>
                 <th>Invoice</th>
-                <th>Supplier</th>
-                <th>PO</th>
+                <th>Supplier / customer</th>
+                <th>PO / order</th>
                 <th class="num">Total</th>
                 <th>Status</th>
                 <th></th>
@@ -138,7 +138,8 @@
         <div class="block-head">
           <h2>Upload an invoice</h2>
           <p class="muted">
-            PDF or scanned image. Extraction runs on the server.
+            PDF or scanned image, or scan the paper with your phone camera. Extraction runs on the server.
+            Need a test receipt? <a href="/receipt-generator" class="text-link">Open the receipt generator</a>.
           </p>
         </div>
 
@@ -149,9 +150,10 @@
             <strong>Choose a file</strong> or drag it here
           </label>
 
-          <button type="submit" class="btn btn-outline">
-            Upload
-          </button>
+          <div class="dropzone-actions">
+            <button type="submit" class="btn btn-outline">Upload</button>
+            <button type="button" class="btn btn-outline" data-scan>Scan with camera</button>
+          </div>
         </form>
 
         <pre class="result" hidden></pre>
@@ -165,7 +167,7 @@
         <div><span class="stat-num" data-stat="ord-ready">–</span><span class="stat-label">Ready to approve</span></div>
         <div><span class="stat-num" data-stat="ord-attention">–</span><span class="stat-label">Needs attention</span>
         </div>
-        <div><span class="stat-num" data-stat="ord-done">–</span><span class="stat-label">Approved / exported</span>
+        <div><span class="stat-num" data-stat="ord-done">–</span><span class="stat-label">Approved / rejected</span>
         </div>
       </section>
 
@@ -173,9 +175,12 @@
         <div class="block-head row">
           <div>
             <h2>Order queue</h2>
-            <p class="muted">Extracted purchase and sales orders, checked against the product catalogue.</p>
+            <p class="muted">Pending orders, checked against the product catalogue. Approve or reject each transaction.</p>
           </div>
-          <a href="/api/orders/export.csv" class="btn btn-outline" id="export-orders">Export approved (CSV)</a>
+          <div class="actions">
+            <button type="button" class="btn btn-solid" id="add-order">+ Add New Order</button>
+            <a href="/api/orders/export.csv" class="btn btn-outline" id="export-orders">Export approved (CSV)</a>
+          </div>
         </div>
         <div class="split">
           <table class="table">
@@ -195,6 +200,7 @@
               </tr>
             </tbody>
           </table>
+          <datalist id="catalog-names"></datalist>
           <aside class="detail" id="order-detail">
             <p class="muted">No order selected.</p>
           </aside>
@@ -209,7 +215,10 @@
         <form class="dropzone" data-upload="/api/orders/upload">
           <input type="file" id="order-file" name="file" accept=".pdf,image/*" />
           <label for="order-file"><strong>Choose a file</strong> or drag it here</label>
-          <button type="submit" class="btn btn-outline">Upload</button>
+          <div class="dropzone-actions">
+            <button type="submit" class="btn btn-outline">Upload</button>
+            <button type="button" class="btn btn-outline" data-scan>Scan with camera</button>
+          </div>
         </form>
         <pre class="result" hidden></pre>
       </section>
@@ -362,7 +371,8 @@
     </div>
   </div>
 
-  <script src="./js/app.js"></script>
+  <script src="js/scanner.js"></script>
+  <script src="js/app.js"></script>
 </body>
 
 </html>

@@ -223,7 +223,10 @@ function renderInvoiceDetail(inv) {
     ? `<ul>${inv.match.flags.map((f) => `<li class="${f.level}">${esc(f.message)}</li>`).join("")}</ul>`
     : `<p class="muted" style="margin-top:1rem">All lines agree with ${esc(inv.po_number)}.</p>`;
   const lines = (inv.lines || [])
-    .map((l) => `<tr><td>${esc(l.sku)}</td><td class="num">${l.qty}</td><td class="num">${Number(l.unit_price).toFixed(2)}</td></tr>`)
+    .map((l) => {
+      const item = l.sku ? esc(l.sku) : `<span class="muted">${esc(l.description || "—")} (no SKU)</span>`;
+      return `<tr><td>${item}</td><td class="num">${l.qty}</td><td class="num">${Number(l.unit_price).toFixed(2)}</td></tr>`;
+    })
     .join("");
   $("#invoice-detail").innerHTML = `
     <span class="pill ${inv.match?.status || ""}">${inv.match?.status || ""}</span>
@@ -250,7 +253,16 @@ function renderInvoices(invoices) {
   setStat("inv-mismatch", count("mismatch"));
 
   const tbody = $("#invoice-rows");
-  tbody.innerHTML = invoices
+  const rank = (e) => (e.invoice.status === "pending" ? 0 : 1); // awaiting invoice first
+  const approved = [...invoiceQueue].sort((a, b) => rank(a) - rank(b))
+    .map((e) => `<tr data-iq="${esc(e.order_id)}" class="${e.order_id === selectedInvoiceId ? "active" : ""}">
+        <td>${esc(e.invoice.invoice_number)}<br /><span class="muted">${esc(e.transaction_id)}</span></td>
+        <td>${esc(e.invoice.customer.name)}</td><td>${esc(e.order_number || e.order_id)}</td>
+        <td class="num">${money(e.invoice.total, e.invoice.currency)}</td>
+        <td><span class="pill ${e.invoice.status}">${e.invoice.status === "pending" ? "awaiting invoice" : "generated"}</span></td>
+        <td></td></tr>`)
+    .join("");
+  tbody.innerHTML = approved + invoices
     .map(
       (inv, i) => `<tr data-i="${i}">
         <td>${esc(inv.invoice_number)}</td><td>${esc(inv.supplier)}</td><td>${esc(inv.po_number)}</td>
@@ -259,7 +271,17 @@ function renderInvoices(invoices) {
         <td>${trashButton("invoice", inv.invoice_number)}</td></tr>`
     )
     .join("");
-  selectableRows(tbody, (row) => renderInvoiceDetail(invoices[row.dataset.i]));
+  selectableRows(tbody, (row) => {
+    if (row.dataset.iq) {
+      selectedInvoiceId = row.dataset.iq;
+      renderInvoiceEditor(invoiceQueue.find((e) => e.order_id === selectedInvoiceId));
+    } else {
+      selectedInvoiceId = null;
+      renderInvoiceDetail(invoices[row.dataset.i]);
+    }
+  });
+  const selected = invoiceQueue.find((e) => e.order_id === selectedInvoiceId);
+  if (selected) renderInvoiceEditor(selected);
   $$("[data-trash=invoice]", tbody).forEach((btn) =>
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -302,7 +324,7 @@ function renderPurchaseOrders(orders, variants) {
         <div class="card-top">${trashButton("po", po.po_number)}</div>
         <h4>${esc(po.po_number)}</h4>
         <p class="muted">${esc(po.supplier)}</p>
-        <p class="muted">${po.lines.length} line(s)</p>
+        <p class="muted">${po.lines.length} line(s)${po.auto_created ? ` · auto-created from ${esc(po.source_invoice)}` : ""}</p>
         <div class="po-invoice">
           <select aria-label="Invoice variant">${options}</select>
           <div class="actions">
@@ -402,10 +424,11 @@ $("#product-invoice")?.addEventListener("submit", (e) => {
 let invoices = [];
 
 async function loadInvoices() {
-  const [list, pos, variants, prods] = await Promise.all([
-    api("/api/invoices"), api("/api/purchase-orders"), api("/api/invoice-variants"), api("/api/products"),
+  const [list, pos, variants, prods, queue] = await Promise.all([
+    api("/api/invoices"), api("/api/purchase-orders"), api("/api/invoice-variants"), api("/api/products"), api("/api/invoice-queue"),
   ]);
   invoices = list;
+  invoiceQueue = queue;
   renderInvoices(invoices);
   renderPurchaseOrders(pos, variants);
   const chosen = { sku: $("#pi-product")?.value, qty: $("#pi-qty")?.value, variant: $("#pi-variant")?.value };
@@ -431,7 +454,9 @@ async function afterInvoiceUpload(result) {
   }
 
   if (out) {
+    const filled = (result.invoice.auto_filled || []).map(label);
     out.textContent = `${result.invoice.invoice_number} read from ${result.draft?.source_file || "document"} and added to the review queue (${result.invoice.match?.status || "pending"}).` +
+      (filled.length ? ` Auto-filled: ${filled.join(", ")}.` : "") +
       (result.saved
         ? " PDF and details saved to the database."
         : result.storage_error
@@ -439,8 +464,7 @@ async function afterInvoiceUpload(result) {
           : "");
   }
 
-  invoices = await api("/api/invoices");
-  renderInvoices(invoices);
+  await loadInvoices(); // also refreshes the PO cards, which may now include an auto-created PO
 
   const row = $(`#invoice-rows tr[data-i="${invoices.length - 1}"]`);
   if (row) {
@@ -462,7 +486,40 @@ function selectableRows(tbody, onSelect) {
 /* ---------- Spectra: orders ---------- */
 
 let orders = [];
+let invoiceQueue = []; // approved transactions awaiting / with a generated invoice
+let selectedInvoiceId = null;
+let catalog = [];
 let selectedOrderId = null;
+
+const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—");
+
+const adminInput = $("#admin-name");
+if (adminInput) {
+  try { adminInput.value = localStorage.getItem("koda-admin") || ""; } catch {}
+  adminInput.addEventListener("change", () => {
+    try { localStorage.setItem("koda-admin", adminInput.value.trim()); } catch {}
+  });
+}
+
+// Every approval, rejection and invoice edit is recorded against the administrator's name.
+async function adminName() {
+  if (!adminInput) return "Administrator"; // no name field on the page: record a generic administrator
+  const name = adminInput.value.trim();
+  if (name) return name;
+  await noticeModal("Who is approving?", "Enter your name in the Administrator field above the order queue first.", "Administrator required");
+  adminInput?.focus();
+  return null;
+}
+
+function approvalRecord(o) {
+  const a = o.approval;
+  if (!a) return "";
+  return `<div class="audit ${a.decision}">
+    <strong>${a.decision === "approved" ? "Approved" : "Rejected"}</strong> by ${esc(a.by)} on ${esc(fmtTime(a.at))}
+    ${a.reason ? `<br /><span class="muted">Reason: ${esc(a.reason)}</span>` : ""}
+    ${a.decision === "rejected" ? `<br /><span class="muted">Rejected transactions are not invoiced or exported.</span>` : ""}
+  </div>`;
+}
 
 const orderBadge = (o) => (o.status === "extracted" ? o.validation?.status : o.status);
 
@@ -486,68 +543,261 @@ function renderOrderDetail(o) {
   $("#order-detail").innerHTML = `
     <span class="pill ${orderBadge(o)}">${label(orderBadge(o) || "")}</span>
     <h3 style="margin-top:1rem">${esc(o.order_number || "No order number")}</h3>
-    <p class="muted">${esc(o.counterparty)} · ${esc(o.type)} order</p>
+    <p class="muted">${esc(o.counterparty)} · ${esc(o.type)} order · ${esc(o.transaction_id)}</p>
     <p class="muted">Ordered ${esc(o.order_date || "—")} · Deliver ${esc(o.delivery_date || "—")} · from ${esc(o.source_file)}</p>
     ${issues}${warningList}
     <table><thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Amount</th></tr></thead><tbody>${lines}</tbody></table>
     <p style="margin-top:1rem" class="num"><strong>${money(o.total ?? v.line_total, o.currency)}</strong></p>
-    <button class="btn btn-outline" style="margin-top:1rem" id="approve-order" ${canApprove ? "" : "disabled"}>
-      ${o.status === "extracted" ? "Approve for export" : label(o.status)}</button>
-    ${o.status === "extracted" ? `<button class="btn btn-outline" style="margin-top:1rem" id="edit-order">Edit</button>` : ""}`;
-  $("#edit-order")?.addEventListener("click", () => renderOrderEditor(o));
+    ${approvalRecord(o)}
+    ${o.status === "extracted" ? `<div class="actions">
+      <button class="btn btn-solid" id="approve-order" ${canApprove ? "" : 'disabled title="Fix validation issues first"'}>Approve transaction</button>
+      <button class="btn btn-danger" id="reject-order">Reject transaction</button>
+      <button class="btn btn-outline" id="edit-order">Edit order</button></div>
+      <div class="reject-box" id="reject-box" hidden>
+        <label class="edit-field">Reason for rejection<textarea id="reject-reason" rows="2" maxlength="500"></textarea></label>
+        <div class="actions"><button class="btn btn-danger btn-sm" id="reject-confirm">Confirm rejection</button>
+          <button class="btn btn-outline btn-sm" id="reject-cancel">Cancel</button></div>
+      </div>` : orderLocked(o) ? `<p class="muted" style="margin-top:1rem">${esc(orderLocked(o))}</p>`
+      : `<div class="actions"><button class="btn btn-outline" id="edit-order">Edit order / status</button></div>`}
+    ${o.updated_at ? `<p class="muted" style="margin-top:.6rem;font-size:.8rem">Last edited by ${esc(o.updated_by)} · ${esc(fmtTime(o.updated_at))}</p>` : ""}`;
+  $("#edit-order")?.addEventListener("click", () => renderOrderForm(o));
   $("#approve-order")?.addEventListener("click", async () => {
+    const by = await adminName();
+    if (!by) return;
+    const ok = await confirmModal({
+      eyebrow: "Approve Transaction",
+      title: `Approve ${o.order_number || o.id}?`,
+      message: `${o.transaction_id} will be marked Approved by ${by} and moved to the Review queue on the Invoices tab.`,
+      confirmText: "Approve",
+    });
+    if (!ok) return;
     try {
-      await api(`/api/orders/${o.id}/approve`, { method: "POST" });
+      await api(`/api/orders/${o.id}/approve`, { method: "POST", body: JSON.stringify({ approved_by: by }) });
+      selectedInvoiceId = o.id;
       await loadOrders();
     } catch (err) {
       await noticeModal("Approval failed", err.message);
     }
   });
-}
-
-function renderOrderEditor(o) {
-  const field = (name, text, type = "text") =>
-    `<label class="edit-field">${text}<input name="${name}" type="${type}" value="${esc(o[name])}" /></label>`;
-  const lineRow = (l = {}) => `<tr>
-    <td><input name="sku" value="${esc(l.sku)}" /></td><td><input name="description" value="${esc(l.description)}" /></td>
-    <td><input name="quantity" type="number" step="any" min="0" value="${esc(l.quantity)}" /></td>
-    <td><input name="unit_price" type="number" step="any" min="0" value="${esc(l.unit_price)}" /></td>
-    <td><button type="button" class="btn btn-outline btn-sm" data-drop-line>✕</button></td></tr>`;
-  $("#order-detail").innerHTML = `
-    <h3>Edit ${esc(o.id)}</h3>
-    <p class="muted">Check the values against the original document (${esc(o.source_file)}).</p>
-    <form id="order-edit">
-      ${field("order_number", "Order number")}${field("counterparty", "Customer")}
-      ${field("order_date", "Order date", "date")}${field("delivery_date", "Delivery date", "date")}${field("currency", "Currency")}
-      <table class="edit-lines"><thead><tr><th>SKU</th><th>Description</th><th>Qty</th><th>Unit price</th><th></th></tr></thead>
-        <tbody>${(o.lines || []).map(lineRow).join("")}</tbody></table>
-      <button type="button" class="btn btn-outline btn-sm" id="add-line">+ Add line</button>
-      <div style="margin-top:1rem"><button class="btn btn-outline" type="submit">Save and re-check</button>
-        <button class="btn btn-outline" type="button" id="cancel-edit">Cancel</button></div>
-    </form>`;
-  const form = $("#order-edit");
-  const tbody = $("tbody", form);
-  form.addEventListener("click", (e) => e.target.matches("[data-drop-line]") && e.target.closest("tr").remove());
-  $("#add-line").addEventListener("click", () => tbody.insertAdjacentHTML("beforeend", lineRow()));
-  $("#cancel-edit").addEventListener("click", () => renderOrderDetail(o));
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const val = (name) => form.elements[name].value;
-    const body = {
-      order_number: val("order_number"), counterparty: val("counterparty"), currency: val("currency"),
-      order_date: val("order_date") || null, delivery_date: val("delivery_date") || null,
-      lines: $$("tr", tbody).map((tr) => {
-        const v = (n) => $(`[name=${n}]`, tr).value;
-        return { sku: v("sku"), description: v("description"), quantity: Number(v("quantity")) || 0, unit_price: Number(v("unit_price")) || 0 };
-      }),
-    };
+  $("#reject-order")?.addEventListener("click", () => {
+    $("#reject-box").hidden = false;
+    $("#reject-reason").focus();
+  });
+  $("#reject-cancel")?.addEventListener("click", () => ($("#reject-box").hidden = true));
+  $("#reject-confirm")?.addEventListener("click", async () => {
+    const by = await adminName();
+    if (!by) return;
+    const ok = await confirmModal({
+      eyebrow: "Reject Transaction",
+      title: `Reject ${o.order_number || o.id}?`,
+      message: "A rejected transaction is kept on file but never invoiced or exported.",
+      confirmText: "Reject",
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await api(`/api/orders/${o.id}`, { method: "PATCH", body: JSON.stringify(body) });
+      await api(`/api/orders/${o.id}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ rejected_by: by, reason: $("#reject-reason").value }),
+      });
       await loadOrders();
     } catch (err) {
-      await noticeModal("Save failed", err.message);
+      await noticeModal("Rejection failed", err.message);
     }
   });
+}
+
+// Why an order can no longer be edited, or "" if it can.
+function orderLocked(o) {
+  if (o.status === "exported") return "Exported to the ERP, so this order can no longer be edited.";
+  if (o.invoice?.status === "generated") return "Its invoice has been generated, so this order can no longer be edited.";
+  return "";
+}
+
+const STATUS_LABEL = { extracted: "Pending", approved: "Approved", rejected: "Rejected" };
+
+const orderItemRow = (l = { description: "", sku: "", quantity: 1, unit_price: 0 }) => `<div class="iq-item">
+  <div class="iq-item-head">
+    <input name="description" value="${esc(l.description)}" list="catalog-names" placeholder="Item" aria-label="Item" maxlength="200" />
+    <button type="button" class="icon-btn" data-remove aria-label="Remove item" title="Remove item">✕</button>
+  </div>
+  <input name="sku" value="${esc(l.sku)}" placeholder="SKU (filled in for catalogue items)" aria-label="SKU" maxlength="40" />
+  <div class="iq-item-row">
+    <div class="qty"><button type="button" class="btn btn-outline btn-sm" data-step="-1" aria-label="Decrease quantity">−</button>
+      <input name="quantity" type="number" min="0.01" step="any" value="${esc(l.quantity)}" aria-label="Qty" required />
+      <button type="button" class="btn btn-outline btn-sm" data-step="1" aria-label="Increase quantity">+</button></div>
+    <label class="price">× <input name="unit_price" type="number" min="0" step="0.01" value="${esc(l.unit_price)}" aria-label="Unit price" required /></label>
+    <span class="amount" data-amount></span>
+  </div></div>`;
+
+// One form for both "+ Add New Order" (o = null) and editing an existing order in place.
+function renderOrderForm(o = null) {
+  const isNew = !o;
+  const d = o || { order_number: "", type: "sales", counterparty: "", order_date: new Date().toISOString().slice(0, 10), delivery_date: "", currency: "SGD", lines: [{}], status: "extracted" };
+  const field = (name, text, type = "text", extra = "") =>
+    `<label class="edit-field">${text}<input name="${name}" type="${type}" value="${esc(d[name])}" ${extra} /></label>`;
+  $("#order-detail").innerHTML = `
+    <h3>${isNew ? "New order" : `Edit ${esc(o.order_number || o.id)}`}</h3>
+    <p class="muted">${isNew ? "Key in an order by hand. It joins the queue as Pending." : `Changes are saved to this record (${esc(o.transaction_id)}), not as a new order.`}</p>
+    <form id="order-form" novalidate>
+      ${field("order_number", "Order number", "text", 'required maxlength="40"')}
+      <label class="edit-field">Type<select name="type">
+        <option value="sales" ${d.type === "sales" ? "selected" : ""}>Sales order</option>
+        <option value="purchase" ${d.type === "purchase" ? "selected" : ""}>Purchase order</option></select></label>
+      ${field("counterparty", "Customer / supplier", "text", 'required maxlength="120"')}
+      <div style="display:flex;gap:1rem">
+        <div style="flex:1">${field("order_date", "Order date", "date", "required")}</div>
+        <div style="flex:1">${field("delivery_date", "Delivery date", "date")}</div>
+      </div>
+      ${field("currency", "Currency", "text", 'required minlength="3" maxlength="3" style="text-transform:uppercase"')}
+      ${isNew ? "" : `<label class="edit-field">Status<select name="status">
+        ${Object.entries(STATUS_LABEL).map(([k, v]) => `<option value="${k}" ${o.status === k ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+        <label class="edit-field" id="status-reason" hidden>Reason for rejection<textarea name="reason" rows="2" maxlength="500"></textarea></label>
+        ${o.status !== "extracted" ? `<p class="muted" style="font-size:.8rem;margin-top:.4rem">Saving reopens this ${STATUS_LABEL[o.status].toLowerCase()} order, then applies the status you pick. Approving again re-checks it and makes a new invoice draft.</p>` : ""}`}
+      <h4 style="margin-top:1rem">Items</h4>
+      <div class="iq-items" id="order-items">${(d.lines.length ? d.lines : [{}]).map((l) => orderItemRow({ description: "", sku: "", quantity: 1, unit_price: 0, ...l })).join("")}</div>
+      <button type="button" class="btn btn-outline btn-sm" id="order-add-item">+ Add item</button>
+      <div class="iq-totals"><span class="grand">Order total</span><span class="num grand" id="order-total"></span></div>
+      <div class="actions">
+        <button class="btn btn-solid" type="submit">${isNew ? "Create order" : "Save changes"}</button>
+        <button class="btn btn-outline" type="button" id="cancel-edit">Cancel</button>
+      </div>
+    </form>`;
+
+  const form = $("#order-form");
+  const list = $("#order-items", form);
+  const byName = Object.fromEntries(catalog.map((c) => [c.name.toLowerCase(), c]));
+  const collect = () => ({
+    order_number: form.elements.order_number.value.trim(),
+    type: form.elements.type.value,
+    counterparty: form.elements.counterparty.value.trim(),
+    order_date: form.elements.order_date.value || null,
+    delivery_date: form.elements.delivery_date.value || null,
+    currency: form.elements.currency.value.trim().toUpperCase(),
+    lines: $$(".iq-item", list).map((card) => {
+      const v = (n) => $(`[name=${n}]`, card).value;
+      return { description: v("description").trim(), sku: v("sku").trim() || null, quantity: Number(v("quantity")) || 0, unit_price: Number(v("unit_price")) || 0 };
+    }),
+  });
+  const recalc = () => {
+    const data = collect();
+    let total = 0;
+    $$(".iq-item", list).forEach((card, n) => {
+      const amount = round2(data.lines[n].quantity * data.lines[n].unit_price);
+      total += amount;
+      $("[data-amount]", card).textContent = money(amount, data.currency || "SGD");
+    });
+    $("#order-total").textContent = money(round2(total), data.currency || "SGD");
+  };
+  const statusSel = form.elements.status;
+  statusSel?.addEventListener("change", () => ($("#status-reason").hidden = statusSel.value !== "rejected"));
+
+  form.addEventListener("input", (ev) => {
+    // Picking a catalogue item fills its SKU and list price.
+    if (ev.target.name === "description") {
+      const item = byName[ev.target.value.trim().toLowerCase()];
+      const card = ev.target.closest(".iq-item");
+      if (item) {
+        $("[name=sku]", card).value = item.sku;
+        const price = $("[name=unit_price]", card);
+        if (!Number(price.value)) price.value = item.unit_price;
+      }
+    }
+    recalc();
+  });
+  form.addEventListener("click", (ev) => {
+    const step = ev.target.closest("[data-step]");
+    if (step) {
+      const input = $("[name=quantity]", step.closest(".iq-item"));
+      input.value = Math.max(1, (Number(input.value) || 0) + Number(step.dataset.step));
+      recalc();
+    }
+    if (ev.target.closest("[data-remove]")) {
+      if ($$(".iq-item", list).length === 1) return noticeModal("At least one item", "An order needs at least one item.");
+      ev.target.closest(".iq-item").remove();
+      recalc();
+    }
+  });
+  $("#order-add-item").addEventListener("click", () => {
+    list.insertAdjacentHTML("beforeend", orderItemRow());
+    $(".iq-item:last-child [name=description]", list).focus();
+    recalc();
+  });
+  $("#cancel-edit").addEventListener("click", () => (o ? renderOrderDetail(o) : ($("#order-detail").innerHTML = `<p class="muted">No order selected.</p>`)));
+
+  // Empty item rows (no name, no price) are dropped rather than blocking the save; anything else
+  // missing is listed in a dialog, since the browser's own validation bubble is easy to miss here.
+  const isBlank = (card) => !$("[name=description]", card).value.trim() && !$("[name=sku]", card).value.trim() && !Number($("[name=unit_price]", card).value);
+  const problems = () => {
+    $$(".invalid", form).forEach((el) => el.classList.remove("invalid"));
+    const out = [];
+    const need = (el, msg) => {
+      if (!el.checkValidity() || !el.value.trim()) {
+        el.classList.add("invalid");
+        out.push(msg);
+      }
+    };
+    need(form.elements.order_number, "Order number is required.");
+    need(form.elements.counterparty, "Customer / supplier is required.");
+    need(form.elements.order_date, "Order date is required.");
+    if (!/^[A-Za-z]{3}$/.test(form.elements.currency.value.trim())) {
+      form.elements.currency.classList.add("invalid");
+      out.push("Currency must be a 3-letter code, e.g. SGD.");
+    }
+    const cards = $$(".iq-item", list).filter((c) => !isBlank(c));
+    if (!cards.length) out.push("Add at least one item.");
+    cards.forEach((card) => {
+      const n = $$(".iq-item", list).indexOf(card) + 1;
+      need($("[name=description]", card), `Item ${n} needs a name.`);
+      const qty = $("[name=quantity]", card);
+      if (!(Number(qty.value) > 0)) { qty.classList.add("invalid"); out.push(`Item ${n}: quantity must be more than 0.`); }
+      const price = $("[name=unit_price]", card);
+      if (price.value === "" || Number(price.value) < 0) { price.classList.add("invalid"); out.push(`Item ${n}: unit price can't be negative.`); }
+    });
+    return out;
+  };
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const issues = problems();
+    if (issues.length) {
+      $(".invalid", form)?.focus();
+      return noticeModal("Check the order", issues.join(" "), "Can't save yet");
+    }
+    const by = await adminName();
+    if (!by) return;
+    $$(".iq-item", list).filter(isBlank).forEach((card) => card.remove());
+    recalc();
+    const body = collect();
+    try {
+      if (isNew) {
+        const created = await api("/api/orders", { method: "POST", body: JSON.stringify({ ...body, created_by: by }) });
+        selectedOrderId = created.id;
+      } else {
+        const want = statusSel.value;
+        const reason = form.elements.reason?.value || "";
+        if (o.status === "extracted") {
+          await api(`/api/orders/${o.id}`, { method: "PATCH", body: JSON.stringify({ ...body, updated_by: by, ...(want !== "extracted" ? { status: want, reason } : {}) }) });
+        } else {
+          // Reopen and save the edits, then apply the chosen status.
+          await api(`/api/orders/${o.id}`, { method: "PATCH", body: JSON.stringify({ ...body, status: "extracted", updated_by: by }) });
+          if (want !== "extracted") {
+            try {
+              await api(`/api/orders/${o.id}`, { method: "PATCH", body: JSON.stringify({ status: want, updated_by: by, reason }) });
+            } catch (err) {
+              await loadOrders();
+              return noticeModal("Saved as Pending", `Your changes were saved, but the order could not be set to ${STATUS_LABEL[want]}: ${err.message}`);
+            }
+          }
+        }
+      }
+      await loadOrders();
+    } catch (err) {
+      await noticeModal(isNew ? "Could not create order" : "Save failed", err.message);
+    }
+  });
+  recalc();
+  form.elements.order_number.focus();
 }
 
 async function afterOrderUpload(result) {
@@ -611,9 +861,191 @@ function renderOrders() {
 }
 
 async function loadOrders() {
-  orders = await api("/api/orders");
+  [orders, invoiceQueue, catalog] = await Promise.all([api("/api/orders"), api("/api/invoice-queue"), api("/api/catalog")]);
+  $("#catalog-names").innerHTML = catalog.map((c) => `<option value="${esc(c.name)}">${esc(c.sku)} · ${c.unit_price.toFixed(2)}</option>`).join("");
   renderOrders();
+  renderInvoiceQueue();
 }
+
+/* ---------- Spectra: review invoice queue ---------- */
+
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+// Approved transactions are shown in the Invoices tab's review queue.
+function renderInvoiceQueue() {
+  if ($("#invoice-rows")) renderInvoices(invoices);
+}
+
+function invoiceRefs(e) {
+  const a = e.approval || {};
+  const inv = e.invoice;
+  return `<dl class="ref-grid">
+    <dt>Order ID</dt><dd>${esc(e.order_number || e.order_id)}</dd>
+    <dt>Transaction ID</dt><dd>${esc(e.transaction_id)}</dd>
+    <dt>Approved</dt><dd>${esc(a.by || "—")} · ${esc(fmtTime(a.at))}</dd>
+    ${inv.updated_at ? `<dt>Last edited</dt><dd>${esc(inv.updated_by)} · ${esc(fmtTime(inv.updated_at))}</dd>` : ""}
+    ${inv.generated_at ? `<dt>Generated</dt><dd>${esc(inv.generated_by)} · ${esc(fmtTime(inv.generated_at))}</dd>` : ""}
+  </dl>`;
+}
+
+function totalsHtml(t, currency, taxRate) {
+  return `<div class="iq-totals">
+    <span>Subtotal</span><span class="num">${money(t.subtotal, currency)}</span>
+    <span>Tax (${round2(taxRate * 100)}%)</span><span class="num">${money(t.tax, currency)}</span>
+    <span class="grand">Total</span><span class="num grand">${money(t.total, currency)}</span></div>`;
+}
+
+function renderGeneratedInvoice(e) {
+  const inv = e.invoice;
+  const c = inv.customer;
+  $("#invoice-detail").innerHTML = `<span class="pill generated">generated</span>
+    <h3 style="margin-top:1rem">${esc(inv.invoice_number)}</h3>
+    <p class="muted">${[c.name, c.address, c.email].filter(Boolean).map(esc).join(" · ")}</p>
+    ${invoiceRefs(e)}
+    <table><thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Amount</th></tr></thead><tbody>
+    ${inv.items.map((i) => `<tr><td>${esc(i.name)}${i.description ? `<br /><span class="muted">${esc(i.description)}</span>` : ""}</td>
+      <td class="num">${i.quantity}</td><td class="num">${Number(i.unit_price).toFixed(2)}</td><td class="num">${Number(i.amount).toFixed(2)}</td></tr>`).join("")}
+    </tbody></table>
+    ${totalsHtml(inv, inv.currency, inv.tax_rate)}
+    <div class="actions"><a class="btn btn-outline" id="iq-download" href="${API}/api/invoice-queue/${e.order_id}/invoice.pdf">Download PDF</a></div>`;
+  $("#iq-download").addEventListener("click", (ev) => {
+    ev.preventDefault();
+    confirmAndDownload(ev.currentTarget.href, `invoice ${inv.invoice_number}`);
+  });
+}
+
+const invoiceItemRow = (i = { name: "", description: "", quantity: 1, unit_price: 0 }) => `<div class="iq-item">
+  <div class="iq-item-head">
+    <input name="name" value="${esc(i.name)}" placeholder="Item name" aria-label="Item name" required maxlength="120" />
+    <button type="button" class="icon-btn" data-remove aria-label="Remove item" title="Remove item">✕</button>
+  </div>
+  <input name="description" value="${esc(i.description)}" placeholder="Description (optional)" aria-label="Description" maxlength="300" />
+  <div class="iq-item-row">
+    <div class="qty"><button type="button" class="btn btn-outline btn-sm" data-step="-1" aria-label="Decrease quantity">−</button>
+      <input name="quantity" type="number" min="0.01" step="any" value="${esc(i.quantity)}" aria-label="Quantity" required />
+      <button type="button" class="btn btn-outline btn-sm" data-step="1" aria-label="Increase quantity">+</button></div>
+    <label class="price">× <input name="unit_price" type="number" min="0" step="0.01" value="${esc(i.unit_price)}" aria-label="Unit price" required /></label>
+    <span class="amount" data-amount></span>
+  </div></div>`;
+
+function renderInvoiceEditor(e) {
+  if (!e) return;
+  if (e.invoice.status !== "pending") return renderGeneratedInvoice(e);
+  const inv = e.invoice;
+  $("#invoice-detail").innerHTML = `<span class="pill pending">awaiting invoice</span>
+    <form id="iq-form" novalidate>
+      <label class="edit-field">Invoice number<input name="invoice_number" value="${esc(inv.invoice_number)}" required maxlength="40" /></label>
+      ${invoiceRefs(e)}
+      <h4 style="margin-top:1rem">Customer</h4>
+      <label class="edit-field">Name<input name="c_name" value="${esc(inv.customer.name)}" required maxlength="120" /></label>
+      <label class="edit-field">Address<textarea name="c_address" rows="2" maxlength="300">${esc(inv.customer.address)}</textarea></label>
+      <label class="edit-field">Email<input name="c_email" type="email" value="${esc(inv.customer.email)}" maxlength="120" /></label>
+      <div style="display:flex;gap:1rem">
+        <label class="edit-field" style="flex:1">Issue date<input name="issue_date" type="date" value="${esc(inv.issue_date)}" required /></label>
+        <label class="edit-field" style="flex:1">Tax rate (%)<input name="tax_pct" type="number" min="0" max="100" step="0.01" value="${round2(inv.tax_rate * 100)}" required /></label>
+      </div>
+      <h4 style="margin-top:1rem">Items</h4>
+      <div class="iq-items" id="iq-items">${inv.items.map(invoiceItemRow).join("")}</div>
+      <button type="button" class="btn btn-outline btn-sm" id="iq-add">+ Add item</button>
+      <div id="iq-totals-slot"></div>
+      <div class="actions">
+        <button type="submit" class="btn btn-solid" id="iq-generate">Generate invoice</button>
+        <button type="button" class="btn btn-outline" id="iq-save">Save draft</button>
+        <button type="button" class="btn btn-outline" id="iq-reset">Discard changes</button>
+      </div>
+    </form>`;
+
+  const form = $("#iq-form");
+  const list = $("#iq-items", form);
+  const collect = () => ({
+    invoice_number: form.elements.invoice_number.value.trim(),
+    customer: { name: form.elements.c_name.value, address: form.elements.c_address.value, email: form.elements.c_email.value },
+    issue_date: form.elements.issue_date.value,
+    tax_rate: (Number(form.elements.tax_pct.value) || 0) / 100,
+    items: $$(".iq-item", list).map((card) => {
+      const v = (n) => $(`[name=${n}]`, card).value;
+      return { name: v("name").trim(), description: v("description"), quantity: Number(v("quantity")) || 0, unit_price: Number(v("unit_price")) || 0 };
+    }),
+  });
+  // Live preview using the server's rounding; the server recomputes totals on save.
+  const recalc = () => {
+    const d = collect();
+    let subtotal = 0;
+    $$(".iq-item", list).forEach((card, n) => {
+      const amount = round2(d.items[n].quantity * d.items[n].unit_price);
+      subtotal += amount;
+      $("[data-amount]", card).textContent = money(amount, inv.currency);
+    });
+    subtotal = round2(subtotal);
+    const tax = round2(subtotal * d.tax_rate);
+    $("#iq-totals-slot").innerHTML = totalsHtml({ subtotal, tax, total: round2(subtotal + tax) }, inv.currency, d.tax_rate);
+  };
+  const save = async (by) => {
+    if (!form.reportValidity()) return null;
+    const d = collect();
+    if (!d.items.length) {
+      await noticeModal("No items", "An invoice needs at least one item.");
+      return null;
+    }
+    try {
+      return await api(`/api/invoice-queue/${e.order_id}`, { method: "PUT", body: JSON.stringify({ ...d, edited_by: by }) });
+    } catch (err) {
+      await noticeModal("Save failed", err.message);
+      return null;
+    }
+  };
+
+  form.addEventListener("input", recalc);
+  form.addEventListener("click", (ev) => {
+    const step = ev.target.closest("[data-step]");
+    if (step) {
+      const input = $("[name=quantity]", step.closest(".iq-item"));
+      input.value = Math.max(1, (Number(input.value) || 0) + Number(step.dataset.step));
+      recalc();
+    }
+    if (ev.target.closest("[data-remove]")) {
+      ev.target.closest(".iq-item").remove();
+      recalc();
+    }
+  });
+  $("#iq-add").addEventListener("click", () => {
+    list.insertAdjacentHTML("beforeend", invoiceItemRow());
+    $(".iq-item:last-child [name=name]", list).focus();
+    recalc();
+  });
+  $("#iq-reset").addEventListener("click", () => renderInvoiceEditor(e));
+  $("#iq-save").addEventListener("click", async () => {
+    const by = await adminName();
+    if (by && (await save(by))) await loadOrders();
+  });
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    if (!form.reportValidity()) return;
+    const by = await adminName();
+    if (!by) return;
+    const ok = await confirmModal({
+      eyebrow: "Generate Invoice",
+      title: `Generate ${collect().invoice_number}?`,
+      message: "The invoice is finalised with the details shown and can no longer be edited.",
+      confirmText: "Generate",
+    });
+    if (!ok || !(await save(by))) return;
+    try {
+      await api(`/api/invoice-queue/${e.order_id}/generate`, { method: "POST", body: JSON.stringify({ generated_by: by }) });
+      await loadOrders();
+    } catch (err) {
+      await noticeModal("Generation failed", err.message);
+    }
+  });
+  recalc();
+}
+
+$("#add-order")?.addEventListener("click", () => {
+  selectedOrderId = null;
+  $(".active", $("#order-rows"))?.classList.remove("active");
+  renderOrderForm();
+  $("#order-detail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
 
 $("#export-orders")?.addEventListener("click", async (e) => {
   e.preventDefault();
@@ -870,6 +1302,15 @@ $$("form[data-upload]").forEach((form) => {
       lbl.innerHTML = file ? `<strong>${esc(file.name)}</strong>` : defaultLabelHtml;
     }
     if (file) processSelectedFile(file);
+  });
+
+  // Phone / webcam scan: capture, crop and enhance, then upload like a picked file.
+  $("[data-scan]", form)?.addEventListener("click", async () => {
+    if (!window.Scanner) return;
+    const file = await window.Scanner.open();
+    if (!file) return;
+    if (lbl) lbl.innerHTML = `<strong>${esc(file.name)}</strong>`;
+    processSelectedFile(file);
   });
 
   // Clicking anywhere on the empty part of the dashed box opens the file picker.

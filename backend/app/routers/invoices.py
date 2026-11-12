@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse, Response
 from app import store
 from app.ai.extractor import extract_invoice
 from app.services.invoice_pdf import VARIANTS, invoice_from_po, render_invoice_pdf
-from app.services import documents, supabase_store
+from app.services import autofill, documents, supabase_store
 from app.services.matching import match_invoice
 
 router = APIRouter(prefix="/api", tags=["invoices (Koda)"])
@@ -105,12 +105,22 @@ INVOICE_FIELDS = ("invoice_number", "po_number", "supplier", "invoice_date", "cu
 
 @router.post("/invoices/upload")
 async def upload_invoice(file: UploadFile = File(...)):
-    """Extract the file. If every required field was read, the invoice joins the review queue."""
+    """Extract the file and add it to the review queue.
+
+    Header fields that could not be read (invoice number, supplier, currency, date, PO number) are
+    generated, and a missing PO is created from the invoice lines; both are flagged for review.
+    Without any line items the upload stays a draft.
+    """
     content = await file.read()
     draft = extract_invoice(file.filename or "upload", content)
+    auto_filled: list[str] = []
     if draft["confidence"] < 1:
-        return {"draft": draft, "invoice": None}
-    record = {k: draft[k] for k in INVOICE_FIELDS}
+        if not draft.get("lines"):  # header fields can be generated, line items cannot
+            return {"draft": draft, "invoice": None}
+        auto_filled = autofill.fill_missing(draft)
+        draft["note"] += f"; auto-filled {', '.join(auto_filled)}"
+    record = {k: draft[k] for k in INVOICE_FIELDS} | {"auto_filled": auto_filled}
+    autofill.create_po(record)
     saved, storage_error = False, None
     if supabase_store.enabled():  # keep the PDF and the row; a Supabase outage must not lose the upload
         path = None
@@ -153,6 +163,7 @@ def delete_invoice(invoice_number: str):
     if match is None:
         raise HTTPException(status_code=404, detail="Invoice not found")
     invoices.remove(match)
+    autofill.remove_po_for(match)
     documents.sync_csv()
     if supabase_store.enabled() and (match.get("file_path") or match.get("source_file")):
         try:

@@ -37,3 +37,10 @@ def test_cannot_delete_po_that_still_has_invoices():
     assert client.delete("/api/purchase-orders/PO-2026-0412").status_code == 204
     assert all(po["po_number"] != "PO-2026-0412" for po in client.get("/api/purchase-orders").json())
     store.reset()
+
+
+def test_standalone_pages_have_clean_urls():
+    for path, marker in [("/receipt-generator", "QuickReceipt Studio"), ("/invoice-generator", "<html")]:
+        r = client.get(path)
+        assert r.status_code == 200 and r.headers["content-type"].startswith("text/html")
+        assert marker in r.text
