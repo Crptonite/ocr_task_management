@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --font: "Montserrat", system-ui, sans-serif;
   --radius: 2px;
   --ok: #4f8a5b;
@@ -274,6 +274,9 @@ input:not([type=checkbox]):not([type=file]), select {
 .edit-lines { margin: 1rem 0 .6rem; }
 .edit-lines td { padding: .2rem .25rem; }
 
+.table .filters th { padding: .3rem .8rem .8rem; text-transform: none; letter-spacing: 0; }
+.table .filters select { width: 100%; font-size: .78rem; padding: .3rem .4rem; }
+#documents-table tbody tr { cursor: default; }
 /* Custom confirmation modal */
 .modal-backdrop {
   position: fixed;

@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from app import store
 from app.ai.extractor import extract_order
+from app.services import documents
 from app.services.invoice_queue import new_invoice_draft, now_iso, transaction_id
 from app.services.orders import koda_entry, orders_to_csv, validate_order
 
@@ -84,6 +85,7 @@ def export_orders():
     csv_text = orders_to_csv(approved)
     for order in approved:
         order["status"] = "exported"
+    documents.sync_csv()
     return Response(
         csv_text,
         media_type="text/csv",
@@ -116,6 +118,7 @@ def do_approve(order: dict, by: str) -> None:
     order["approval"] = {"decision": "approved", "by": by, "at": now_iso()}
     order["invoice"] = new_invoice_draft(order, store.orders["catalog"])  # joins the Review Invoice Queue
     log_status(order, "approved", by)
+    documents.sync_csv()
 
 
 def do_reject(order: dict, by: str, reason: str) -> None:
@@ -124,6 +127,7 @@ def do_reject(order: dict, by: str, reason: str) -> None:
     order["status"] = "rejected"
     order["approval"] = {"decision": "rejected", "by": by, "at": now_iso(), "reason": reason}
     log_status(order, "rejected", by, reason)
+    documents.sync_csv()
 
 
 def do_reopen(order: dict, by: str) -> None:
@@ -166,6 +170,7 @@ def create_order(body: OrderCreate):
     order["transaction_id"] = transaction_id(order)
     log_status(order, "extracted", by, "created")
     store.orders["orders"].append(order)
+    documents.sync_csv()
     return with_validation(order)
 
 
@@ -226,12 +231,14 @@ def update_order(order_id: str, body: OrderPatch):
         do_approve(order, by)
     elif status == "rejected":
         do_reject(order, by, reason)
+    documents.sync_csv()
     return with_validation(order)
 
 
 @router.delete("/orders/{order_id}", status_code=204)
 def delete_order(order_id: str):
     store.orders["orders"].remove(find_order(order_id))
+    documents.sync_csv()
 
 
 @router.post("/orders/upload")
@@ -244,4 +251,5 @@ async def upload_order(file: UploadFile = File(...)):
     order = {"id": store.next_id("ord", store.orders["orders"]), **draft, "status": "extracted"}
     order["transaction_id"] = transaction_id(order)
     store.orders["orders"].append(order)
+    documents.sync_csv()
     return {"draft": draft, "validation": validation, "order": with_validation(order)}

@@ -19,6 +19,7 @@
   <header class="nav">
     <a href="#invoices" class="logo">KODA</a>
     <nav>
+      <a href="#documents" data-tab="documents">Documents</a>
       <a href="#invoices" data-tab="invoices">Invoices</a>
       <a href="#orders" data-tab="orders">Orders</a>
       <a href="#projects" data-tab="projects">Projects</a>
@@ -48,6 +49,26 @@
   </section>
 
   <main class="container">
+    <!-- All documents: invoices + orders, mirrored to documents.csv -->
+    <div class="view" data-view="documents" hidden>
+      <section class="block">
+        <div class="block-head row">
+          <div>
+            <h2>All documents</h2>
+            <p class="muted">Every invoice and order in one list. Use the dropdown under each heading to filter. The CSV is rewritten whenever a document is added, changed or deleted.</p>
+          </div>
+          <a href="/api/documents.csv" class="btn btn-outline">Download CSV</a>
+        </div>
+        <table class="table" id="documents-table">
+          <thead>
+            <tr><th>Document</th><th>Type</th><th>Company</th><th>Date</th><th class="num">Amount</th><th>Status</th></tr>
+            <tr class="filters"><th><select data-col="Document" aria-label="Filter document"></select></th><th><select data-col="Type" aria-label="Filter type"></select></th><th><select data-col="Company" aria-label="Filter company"></select></th><th><select data-col="Date" aria-label="Filter date"></select></th><th><select data-col="Amount" aria-label="Filter amount"></select></th><th><select data-col="Status" aria-label="Filter status"></select></th></tr>
+          </thead>
+          <tbody id="document-rows"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </section>
+    </div>
+
     <!-- Koda: invoice checking -->
     <div class="view" data-view="invoices">
       <section class="stats">
