@@ -1,7 +1,11 @@
 """Free-form invoice PDF (easyinvoicepdf-style): the user types every field instead of deriving it from a PO."""
 from fpdf import FPDF
 
-CURRENCY_SYMBOLS = {"SGD": "$", "USD": "$", "EUR": "EUR ", "GBP": "GBP "}  # core PDF fonts are latin-1 only
+CURRENCY_SYMBOLS = {"SGD": "$", "USD": "$", "EUR": "EUR ", "GBP": "GBP ", "MYR": "RM ", "VND": "VND "}  # core PDF fonts are latin-1 only
+
+
+def _safe_text(value: object) -> str:
+    return str(value or "").encode("latin-1", "replace").decode("latin-1")
 
 
 def invoice_totals(items: list[dict], gst_rate: float) -> dict:
@@ -25,7 +29,7 @@ def render_generated_invoice(inv: dict) -> bytes:
     pdf.cell(0, 12, "INVOICE", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(110)
-    pdf.cell(0, 6, f"No. {inv['invoice_number']}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, f"No. {_safe_text(inv['invoice_number'])}", new_x="LMARGIN", new_y="NEXT")
     pdf.set_text_color(0)
     pdf.ln(6)
 
@@ -39,7 +43,7 @@ def render_generated_invoice(inv: dict) -> bytes:
         pdf.set_xy(x, top + 5)
         pdf.set_font("Helvetica", "B", 11)
         pdf.set_text_color(0)
-        pdf.multi_cell(80, 6, name)
+        pdf.multi_cell(80, 6, _safe_text(name))
         bottom = max(bottom, pdf.get_y() + 4)
     pdf.set_y(bottom)
 
@@ -55,7 +59,7 @@ def render_generated_invoice(inv: dict) -> bytes:
         pdf.set_font("Helvetica", "B", 10)
         pdf.cell(40, 6, label)
         pdf.set_font("Helvetica", "", 10)
-        pdf.cell(0, 6, str(value), new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, _safe_text(value), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(8)
 
     widths = [84, 20, 35, 35]
@@ -66,7 +70,7 @@ def render_generated_invoice(inv: dict) -> bytes:
     pdf.ln()
     pdf.set_font("Helvetica", "", 9)
     for line in t["lines"]:
-        cells = [line["description"][:48], f"{line['quantity']:g}", money(line["unit_price"]), money(line["amount"])]
+        cells = [_safe_text(line["description"])[:48], f"{line['quantity']:g}", money(line["unit_price"]), money(line["amount"])]
         for w, text, align in zip(widths, cells, "LRRR"):
             pdf.cell(w, 7, text, border="B", align=align)
         pdf.ln()

@@ -29,3 +29,10 @@ def test_pdf_contains_details():
 
 def test_rejects_empty_items():
     assert client.post("/api/invoice-generator/pdf", json={**PAYLOAD, "items": []}).status_code == 422
+
+
+def test_pdf_handles_myr_and_vnd_and_unicode():
+    for cur in ("MYR", "VND"):
+        r = client.post("/api/invoice-generator/pdf", json={**PAYLOAD, "currency": cur, "seller": "Công ty Gỗ — Koda"})
+        assert r.status_code == 200 and r.headers["content-type"] == "application/pdf"
+

@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Koda · Workspace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;800&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="./css/styles.css" />
   <script>
@@ -17,14 +17,24 @@
 
 <body>
   <header class="nav">
-    <a href="#invoices" class="logo">KODA</a>
+    <div class="nav-left">
+      <button id="sidebar-toggle" class="icon-btn sidebar-toggle" type="button" aria-label="Toggle navigation sidebar"
+        aria-expanded="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75"
+          stroke-linecap="round">
+          <path d="M3 6h18M3 12h18M3 18h18" />
+        </svg>
+      </button>
+      <a href="#orders/intake" class="logo">KODA</a>
+      <span class="nav-tag">6a · 6b Ops Desk</span>
+    </div>
     <nav>
       <a href="#documents" data-tab="documents">Documents</a>
       <a href="#invoices" data-tab="invoices">Invoices</a>
       <a href="#orders" data-tab="orders">Orders</a>
       <a href="#projects" data-tab="projects">Projects</a>
       <a href="#planning" data-tab="planning">Planning</a>
-      <button id="theme-toggle" class="icon-btn" aria-label="Toggle light / dark mode">
+      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle light / dark mode">
         <svg class="sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
           stroke-width="1.5">
           <circle cx="12" cy="12" r="4" />
@@ -39,326 +49,583 @@
     </nav>
   </header>
 
-  <section class="hero">
-    <div class="hero-inner">
-      <p class="eyebrow" id="hero-eyebrow"></p>
-      <h1 id="hero-title"></h1>
-      <span class="rule"></span>
-      <p class="lede" id="hero-lede"></p>
+  <div class="workspace" id="workspace">
+    <div class="sidebar-scrim" id="sidebar-scrim" hidden></div>
+    <aside class="sidebar" id="sidebar" aria-label="Workspace features">
+      <div class="sidebar-inner">
+        <p class="sidebar-kicker">Workspace</p>
+
+        <div class="sb-group" data-group="orders">
+          <div class="sb-parent-row">
+            <a href="#orders" class="sb-parent" data-tab="orders">Orders <span class="sb-badge">6a</span></a>
+            <button type="button" class="sb-chev" data-toggle-group="orders" aria-label="Expand Orders"
+              aria-expanded="true">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M4 6l4 4 4-4" />
+              </svg>
+            </button>
+          </div>
+          <div class="sb-children">
+            <a href="#orders/intake" class="sb-child" data-nav="orders" data-section="ord-intake">PO Intake &amp; Validation</a>
+            <a href="#orders/queue" class="sb-child" data-nav="orders" data-section="ord-queue">Order Queue</a>
+            <a href="#orders/upload" class="sb-child" data-nav="orders" data-section="ord-upload">Quick File Upload</a>
+          </div>
+        </div>
+
+        <div class="sb-group" data-group="documents">
+          <div class="sb-parent-row">
+            <a href="#documents" class="sb-parent" data-tab="documents">Documents</a>
+            <button type="button" class="sb-chev" data-toggle-group="documents" aria-label="Expand Documents"
+              aria-expanded="false">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M4 6l4 4 4-4" />
+              </svg>
+            </button>
+          </div>
+          <div class="sb-children">
+            <a href="#documents/all" class="sb-child" data-nav="documents" data-section="doc-all">All Documents &amp; CSV</a>
+          </div>
+        </div>
+
+        <div class="sb-group" data-group="invoices">
+          <div class="sb-parent-row">
+            <a href="#invoices" class="sb-parent" data-tab="invoices">Invoices <span class="sb-badge">6b</span></a>
+            <button type="button" class="sb-chev" data-toggle-group="invoices" aria-label="Expand Invoices"
+              aria-expanded="false">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M4 6l4 4 4-4" />
+              </svg>
+            </button>
+          </div>
+          <div class="sb-children">
+            <a href="#invoices/queue" class="sb-child" data-nav="invoices" data-section="inv-queue">Review Queue</a>
+            <a href="#invoices/pos" class="sb-child" data-nav="invoices" data-section="inv-pos">Purchase Orders</a>
+            <a href="#invoices/create" class="sb-child" data-nav="invoices" data-section="inv-create">Create Invoice</a>
+            <a href="#invoices/upload" class="sb-child" data-nav="invoices" data-section="inv-upload">Upload Invoice</a>
+            <a href="invoice-generator.html" class="sb-child">Invoice Generator Page ↗</a>
+          </div>
+        </div>
+
+        <div class="sb-group" data-group="projects">
+          <div class="sb-parent-row">
+            <a href="#projects" class="sb-parent" data-tab="projects">Projects</a>
+            <button type="button" class="sb-chev" data-toggle-group="projects" aria-label="Expand Projects"
+              aria-expanded="false">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M4 6l4 4 4-4" />
+              </svg>
+            </button>
+          </div>
+          <div class="sb-children">
+            <a href="#projects/list" class="sb-child" data-nav="projects" data-section="prj-list">Projects Overview</a>
+            <a href="#projects/board" class="sb-child" data-nav="projects" data-section="project-board">Task Board</a>
+          </div>
+        </div>
+
+        <div class="sb-group" data-group="planning">
+          <div class="sb-parent-row">
+            <a href="#planning" class="sb-parent" data-tab="planning">Planning <span class="sb-badge">6c</span></a>
+            <button type="button" class="sb-chev" data-toggle-group="planning" aria-label="Expand Planning"
+              aria-expanded="false">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M4 6l4 4 4-4" />
+              </svg>
+            </button>
+          </div>
+          <div class="sb-children">
+            <a href="#planning/build" class="sb-child" data-nav="planning" data-section="pln-build">Suggested Build Order</a>
+            <a href="#planning/materials" class="sb-child" data-nav="planning" data-section="pln-materials">Material Requirements</a>
+            <a href="#planning/purchases" class="sb-child" data-nav="planning" data-section="pln-purchases">Purchase Suggestions</a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <section class="hero">
+        <div class="hero-inner">
+          <p class="eyebrow" id="hero-eyebrow"></p>
+          <h1 id="hero-title"></h1>
+          <span class="rule"></span>
+          <p class="lede" id="hero-lede"></p>
+        </div>
+      </section>
+
+      <main class="container">
+        <!-- All documents: invoices + orders, mirrored to documents.csv -->
+        <div class="view" data-view="documents" hidden>
+          <section class="block" id="doc-all">
+            <div class="block-head row">
+              <div>
+                <h2>All documents</h2>
+                <p class="muted">Every invoice and order in one list. Use the dropdown under each heading to filter. The CSV
+                  is rewritten whenever a document is added, changed or deleted.</p>
+              </div>
+              <a href="/api/documents.csv" class="btn btn-outline">Download CSV</a>
+            </div>
+            <table class="table" id="documents-table">
+              <thead>
+                <tr>
+                  <th>Document</th>
+                  <th>Type</th>
+                  <th>Company</th>
+                  <th>Date</th>
+                  <th class="num">Amount</th>
+                  <th>Status</th>
+                </tr>
+                <tr class="filters">
+                  <th><select data-col="Document" aria-label="Filter document"></select></th>
+                  <th><select data-col="Type" aria-label="Filter type"></select></th>
+                  <th><select data-col="Company" aria-label="Filter company"></select></th>
+                  <th><select data-col="Date" aria-label="Filter date"></select></th>
+                  <th><select data-col="Amount" aria-label="Filter amount"></select></th>
+                  <th><select data-col="Status" aria-label="Filter status"></select></th>
+                </tr>
+              </thead>
+              <tbody id="document-rows">
+                <tr>
+                  <td colspan="6" class="muted">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+
+        <!-- Koda: invoice checking -->
+        <div class="view" data-view="invoices">
+          <section class="stats">
+            <div><span class="stat-num" data-stat="inv-total">–</span><span class="stat-label">Invoices this week</span>
+            </div>
+            <div><span class="stat-num" data-stat="inv-matched">–</span><span class="stat-label">Matched</span></div>
+            <div><span class="stat-num" data-stat="inv-review">–</span><span class="stat-label">Needs review</span></div>
+            <div><span class="stat-num" data-stat="inv-mismatch">–</span><span class="stat-label">Mismatch</span></div>
+          </section>
+
+          <section class="block" id="inv-queue">
+            <div class="block-head">
+              <h2>Review queue</h2>
+              <p class="muted">Approved transactions waiting for their invoice, then supplier invoices. Select one to review
+                it.</p>
+            </div>
+            <div class="split">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Supplier / customer</th>
+                    <th>PO / order</th>
+                    <th class="num">Total</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="invoice-rows">
+                  <tr>
+                    <td colspan="6" class="muted">Loading…</td>
+                  </tr>
+                </tbody>
+              </table>
+              <aside class="detail" id="invoice-detail">
+                <p class="muted">No invoice selected.</p>
+              </aside>
+            </div>
+          </section>
+
+          <section class="block" id="inv-pos">
+            <div class="block-head">
+              <h2>Purchase orders</h2>
+              <p class="muted">Records from the ERP used for matching (mock data for now).</p>
+            </div>
+            <div class="cards" id="po-cards"></div>
+          </section>
+
+          <section class="block" id="inv-create">
+            <div class="block-head">
+              <h2>Create an invoice</h2>
+              <p class="muted">Pick a product, set the quantity, then download the invoice PDF or send it straight to the
+                review queue.</p>
+            </div>
+            <form class="product-invoice" id="product-invoice">
+              <label>Product <select id="pi-product" required></select></label>
+              <label>Quantity <input type="number" id="pi-qty" min="1" step="1" required /></label>
+              <label>Variant <select id="pi-variant"></select></label>
+              <p class="muted" id="pi-hint"></p>
+              <div class="actions">
+                <a class="btn btn-outline" id="pi-download">Download PDF</a>
+                <button type="submit" class="btn btn-outline">Create and upload</button>
+                <a href="invoice-generator.html" class="btn btn-outline">Open Multi-Invoice Studio</a>
+              </div>
+            </form>
+          </section>
+
+          <section class="block" id="inv-upload">
+            <div class="block-head">
+              <h2>Upload an invoice</h2>
+              <p class="muted">
+                PDF or scanned image, or scan the paper with your phone camera. Extraction runs on the server.
+                Need a test receipt? <a href="/receipt-generator" class="text-link">Open the receipt generator</a>.
+              </p>
+            </div>
+
+            <form class="dropzone" data-upload="/api/invoices/upload">
+              <input type="file" id="invoice-file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" />
+
+              <label for="invoice-file">
+                <strong>Choose a file</strong> or drag it here
+              </label>
+
+              <div class="dropzone-actions">
+                <button type="submit" class="btn btn-outline">Upload</button>
+                <button type="button" class="btn btn-outline" data-scan>Scan with camera</button>
+              </div>
+            </form>
+
+            <pre class="result" hidden></pre>
+          </section>
+        </div>
+
+        <!-- Spectra / Koda 6a: order automation -->
+        <div class="view" data-view="orders" hidden>
+          <section class="stats">
+            <div><span class="stat-num" data-stat="ord-total">–</span><span class="stat-label">Orders received</span></div>
+            <div><span class="stat-num" data-stat="ord-ready">–</span><span class="stat-label">Ready to approve</span></div>
+            <div><span class="stat-num" data-stat="ord-attention">–</span><span class="stat-label">Needs attention</span>
+            </div>
+            <div><span class="stat-num" data-stat="ord-done">–</span><span class="stat-label">Approved / rejected</span>
+            </div>
+          </section>
+
+          <!-- Aeric 6a Part 1: PO Intake & Validation Studio -->
+          <section class="block" id="ord-intake">
+            <div class="block-head row">
+              <div>
+                <p class="section-tag">6a · Customer PO Intake</p>
+                <h2>PO Intake &amp; Validation</h2>
+                <p class="muted">Upload a customer PO file or paste email/CSV text. Deterministic rules run first; fuzzy SKU matching catches 1-character typos and missing shipping fields before queue entry.</p>
+              </div>
+              <div class="actions">
+                <button type="button" class="btn btn-outline btn-sm" id="intake-blank-btn">New Blank PO</button>
+                <button type="button" class="btn btn-outline btn-sm" id="intake-reset-btn">Clear</button>
+              </div>
+            </div>
+
+            <div class="intake-grid">
+              <!-- Source input card -->
+              <div class="intake-panel">
+                <div class="intake-panel-head">
+                  <h3>1. Load Customer PO</h3>
+                  <span class="muted small-note">PDF, CSV, TXT, PNG/JPG or pasted text</span>
+                </div>
+
+                <div class="sample-bar">
+                  <span class="sample-label">Test samples:</span>
+                  <div class="chips" id="intake-sample-chips"></div>
+                </div>
+
+                <div class="intake-drop" id="intake-dropzone" tabindex="0">
+                  <input type="file" id="intake-file" accept=".pdf,.csv,.txt,image/png,image/jpeg,image/webp" hidden />
+                  <div class="intake-drop-copy">
+                    <strong id="intake-file-name">Drop a PO file here or click to browse</strong>
+                    <span class="muted">Supports multi-SKU PDFs, buyer portal CSVs, text printouts &amp; scans</span>
+                  </div>
+                  <button type="button" class="btn btn-outline btn-sm" id="intake-browse-btn">Browse File</button>
+                </div>
+
+                <label class="intake-text-label">
+                  <span>Or paste raw PO / email content</span>
+                  <textarea id="intake-raw-text" rows="8"
+                    placeholder="Paste a customer PO table, portal CSV, or free-text email order here, or click a test sample above..."></textarea>
+                </label>
+
+                <div class="intake-source-actions">
+                  <button type="button" class="btn btn-accent" id="intake-parse-btn">Extract &amp; Validate</button>
+                  <span class="muted small-note" id="intake-parse-hint">Rules parse structured POs with 0 AI tokens.</span>
+                </div>
+              </div>
+
+              <!-- Live parsed & validation workspace -->
+              <div class="intake-panel" id="intake-editor-panel">
+                <div class="intake-panel-head">
+                  <div>
+                    <h3>2. Verify Header &amp; Line SKUs</h3>
+                    <p class="muted small-note" id="intake-meta-line">Load a sample, upload a file, or start a blank PO to inspect.</p>
+                  </div>
+                  <span class="pill" id="intake-status-pill" hidden></span>
+                </div>
+
+                <div id="intake-empty" class="intake-empty">
+                  <p>No purchase order loaded yet.</p>
+                  <p class="muted">Select one of the test samples on the left (Clean multi-SKU, Missing port &amp; date, or 1-digit SKU typo) or upload a customer PO file.</p>
+                </div>
+
+                <div id="intake-workspace" hidden>
+                  <div class="intake-summary" id="intake-summary"></div>
+                  <div class="intake-alerts" id="intake-alerts" hidden></div>
+
+                  <div class="intake-fields" id="intake-fields">
+                    <div class="f-group" data-field="po_number">
+                      <label for="po-in-number">PO Number <span class="req">*</span></label>
+                      <input id="po-in-number" data-po-field="po_number" placeholder="e.g. PB-2026-44718" maxlength="40" />
+                      <p class="field-msg" data-msg="po_number"></p>
+                    </div>
+                    <div class="f-group" data-field="buyer">
+                      <label for="po-in-buyer">Buyer / Customer <span class="req">*</span></label>
+                      <input id="po-in-buyer" data-po-field="buyer" placeholder="e.g. Pottery Barn Inc." maxlength="120" />
+                      <p class="field-msg" data-msg="buyer"></p>
+                    </div>
+                    <div class="f-group" data-field="buyer_email">
+                      <label for="po-in-email">Buyer Email</label>
+                      <input id="po-in-email" type="email" data-po-field="buyer_email" placeholder="sourcing@buyer.com" maxlength="120" />
+                      <p class="field-msg" data-msg="buyer_email"></p>
+                    </div>
+                    <div class="f-group" data-field="port">
+                      <label for="po-in-port">Port of Destination <span class="req">*</span></label>
+                      <input id="po-in-port" data-po-field="port" placeholder="e.g. Los Angeles, USA" maxlength="120" />
+                      <p class="field-msg" data-msg="port"></p>
+                    </div>
+                    <div class="f-group" data-field="order_date">
+                      <label for="po-in-odate">Order Date <span class="req">*</span></label>
+                      <input id="po-in-odate" type="date" data-po-field="order_date" />
+                      <p class="field-msg" data-msg="order_date"></p>
+                    </div>
+                    <div class="f-group" data-field="delivery_date">
+                      <label for="po-in-ddate">Delivery Date <span class="req">*</span></label>
+                      <input id="po-in-ddate" type="date" data-po-field="delivery_date" />
+                      <p class="field-msg" data-msg="delivery_date"></p>
+                    </div>
+                    <div class="f-group" data-field="currency">
+                      <label for="po-in-currency">Currency</label>
+                      <input id="po-in-currency" data-po-field="currency" placeholder="USD" maxlength="3" />
+                      <p class="field-msg" data-msg="currency"></p>
+                    </div>
+                  </div>
+
+                  <div class="intake-lines-head">
+                    <h4>Line Items &amp; Catalog Match</h4>
+                    <button type="button" class="btn btn-outline btn-sm" id="intake-add-line">+ Add SKU Line</button>
+                  </div>
+                  <div class="table-wrap">
+                    <table class="table intake-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>SKU</th>
+                          <th>Catalog Match</th>
+                          <th>Description</th>
+                          <th class="num">Qty</th>
+                          <th class="num">Unit Price</th>
+                          <th class="num">Amount</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody id="intake-line-rows"></tbody>
+                    </table>
+                  </div>
+
+                  <div class="intake-footer">
+                    <div class="intake-blocker" id="intake-blocker"></div>
+                    <div class="actions">
+                      <button type="button" class="btn btn-outline" id="intake-email-btn">Draft Buyer Clarification Email</button>
+                      <button type="button" class="btn btn-accent" id="intake-submit-btn">Send to Order Queue</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="block" id="ord-queue">
+            <div class="block-head row">
+              <div>
+                <h2>Order queue</h2>
+                <p class="muted">Pending orders, checked against the product catalogue. Approve or reject each transaction.
+                </p>
+              </div>
+              <div class="actions">
+                <button type="button" class="btn btn-solid" id="add-order">+ Add New Order</button>
+                <a href="/api/orders/export.csv" class="btn btn-outline" id="export-orders">Export approved (CSV)</a>
+              </div>
+            </div>
+            <div class="split">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Type</th>
+                    <th>Customer / supplier</th>
+                    <th class="num">Total</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="order-rows">
+                  <tr>
+                    <td colspan="6" class="muted">Loading…</td>
+                  </tr>
+                </tbody>
+              </table>
+              <datalist id="catalog-names"></datalist>
+              <aside class="detail" id="order-detail">
+                <p class="muted">No order selected.</p>
+              </aside>
+            </div>
+          </section>
+
+          <section class="block" id="ord-upload">
+            <div class="block-head">
+              <h2>Quick file upload</h2>
+              <p class="muted">Drop a PO PDF directly into the order queue, or scan a paper copy with a camera.</p>
+            </div>
+            <form class="dropzone" data-upload="/api/orders/upload">
+              <input type="file" id="order-file" name="file" accept=".pdf,image/*" />
+              <label for="order-file"><strong>Choose a file</strong> or drag it here</label>
+              <div class="dropzone-actions">
+                <button type="submit" class="btn btn-outline">Upload</button>
+                <button type="button" class="btn btn-outline" data-scan>Scan with camera</button>
+              </div>
+            </form>
+            <pre class="result" hidden></pre>
+          </section>
+        </div>
+
+        <!-- Koda: material requirements and production priorities -->
+        <div class="view" data-view="planning" hidden>
+          <section class="stats">
+            <div><span class="stat-num" data-stat="pln-orders">–</span><span class="stat-label">Customer orders</span></div>
+            <div><span class="stat-num" data-stat="pln-ready">–</span><span class="stat-label">Can start now</span></div>
+            <div><span class="stat-num" data-stat="pln-inbound">–</span><span class="stat-label">Waiting on delivery</span>
+            </div>
+            <div><span class="stat-num" data-stat="pln-short">–</span><span class="stat-label">Blocked by shortage</span>
+            </div>
+          </section>
+
+          <section class="block" id="pln-build">
+            <div class="block-head">
+              <h2>Suggested build order</h2>
+              <p class="muted">Earliest-due orders get stock first. An order that cannot be completed reserves nothing.</p>
+            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Due</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>What to do</th>
+                </tr>
+              </thead>
+              <tbody id="plan-rows">
+                <tr>
+                  <td colspan="7" class="muted">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="block" id="pln-materials">
+            <div class="block-head">
+              <h2>Material requirements</h2>
+              <p class="muted">Gross need across all open orders against stock and scheduled deliveries.</p>
+            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Material</th>
+                  <th class="num">Required</th>
+                  <th class="num">On hand</th>
+                  <th class="num">Inbound</th>
+                  <th class="num">Shortfall</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="material-rows"></tbody>
+            </table>
+          </section>
+
+          <section class="block" id="pln-purchases">
+            <div class="block-head">
+              <h2>Purchase suggestions</h2>
+              <p class="muted">Materials that no scheduled delivery covers in time.</p>
+            </div>
+            <div class="cards" id="purchase-cards"></div>
+          </section>
+        </div>
+
+        <!-- EM Services: project tracker -->
+        <div class="view" data-view="projects" hidden>
+          <section class="stats">
+            <div><span class="stat-num" data-stat="prj-total">–</span><span class="stat-label">Active projects</span></div>
+            <div><span class="stat-num" data-stat="prj-open">–</span><span class="stat-label">Open tasks</span></div>
+            <div><span class="stat-num" data-stat="prj-overdue">–</span><span class="stat-label">Overdue</span></div>
+            <div><span class="stat-num" data-stat="prj-done">–</span><span class="stat-label">Tasks done</span></div>
+          </section>
+
+          <section class="block" id="prj-list">
+            <div class="block-head">
+              <h2>Projects</h2>
+              <p class="muted">Select a project to open its task board.</p>
+            </div>
+            <div class="cards" id="project-cards"></div>
+          </section>
+
+          <section class="block" id="project-board" hidden>
+            <div class="block-head row">
+              <div>
+                <h2 id="board-title"></h2>
+                <p class="muted" id="board-meta"></p>
+              </div>
+              <div class="actions">
+                <button class="btn btn-outline" id="btn-summary">Summarize overdue</button>
+                <button class="btn btn-outline" id="btn-suggest">Suggest tasks</button>
+              </div>
+            </div>
+            <div class="ai-box" id="ai-box" hidden></div>
+
+            <div class="toolbar">
+              <label>Owner
+                <select id="owner-filter">
+                  <option value="">Everyone</option>
+                </select>
+              </label>
+              <label class="check"><input type="checkbox" id="overdue-filter" /> Overdue only</label>
+              <form id="task-form" class="task-form">
+                <input name="title" placeholder="New task" required />
+                <select name="owner">
+                  <option value="">Owner</option>
+                </select>
+                <input name="due_date" type="date" />
+                <button class="btn btn-outline" type="submit">Add</button>
+              </form>
+            </div>
+
+            <div class="board">
+              <div class="column" data-status="todo">
+                <h3>To do</h3>
+                <div class="tasks"></div>
+              </div>
+              <div class="column" data-status="in_progress">
+                <h3>In progress</h3>
+                <div class="tasks"></div>
+              </div>
+              <div class="column" data-status="done">
+                <h3>Done</h3>
+                <div class="tasks"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <footer class="footer">
+        <span class="logo small">KODA</span>
+        <span class="muted">Workspace prototype · Koda · IT2134 × SCCCI</span>
+      </footer>
     </div>
-  </section>
+  </div>
 
-  <main class="container">
-    <!-- All documents: invoices + orders, mirrored to documents.csv -->
-    <div class="view" data-view="documents" hidden>
-      <section class="block">
-        <div class="block-head row">
-          <div>
-            <h2>All documents</h2>
-            <p class="muted">Every invoice and order in one list. Use the dropdown under each heading to filter. The CSV is rewritten whenever a document is added, changed or deleted.</p>
-          </div>
-          <a href="/api/documents.csv" class="btn btn-outline">Download CSV</a>
-        </div>
-        <table class="table" id="documents-table">
-          <thead>
-            <tr><th>Document</th><th>Type</th><th>Company</th><th>Date</th><th class="num">Amount</th><th>Status</th></tr>
-            <tr class="filters"><th><select data-col="Document" aria-label="Filter document"></select></th><th><select data-col="Type" aria-label="Filter type"></select></th><th><select data-col="Company" aria-label="Filter company"></select></th><th><select data-col="Date" aria-label="Filter date"></select></th><th><select data-col="Amount" aria-label="Filter amount"></select></th><th><select data-col="Status" aria-label="Filter status"></select></th></tr>
-          </thead>
-          <tbody id="document-rows"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
-        </table>
-      </section>
-    </div>
-
-    <!-- Koda: invoice checking -->
-    <div class="view" data-view="invoices">
-      <section class="stats">
-        <div><span class="stat-num" data-stat="inv-total">–</span><span class="stat-label">Invoices this week</span>
-        </div>
-        <div><span class="stat-num" data-stat="inv-matched">–</span><span class="stat-label">Matched</span></div>
-        <div><span class="stat-num" data-stat="inv-review">–</span><span class="stat-label">Needs review</span></div>
-        <div><span class="stat-num" data-stat="inv-mismatch">–</span><span class="stat-label">Mismatch</span></div>
-      </section>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Review queue</h2>
-          <p class="muted">Approved transactions waiting for their invoice, then supplier invoices. Select one to review it.</p>
-        </div>
-        <div class="split">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Invoice</th>
-                <th>Supplier / customer</th>
-                <th>PO / order</th>
-                <th class="num">Total</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="invoice-rows">
-              <tr>
-                <td colspan="6" class="muted">Loading…</td>
-              </tr>
-            </tbody>
-          </table>
-          <aside class="detail" id="invoice-detail">
-            <p class="muted">No invoice selected.</p>
-          </aside>
-        </div>
-      </section>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Purchase orders</h2>
-          <p class="muted">Records from the ERP used for matching (mock data for now).</p>
-        </div>
-        <div class="cards" id="po-cards"></div>
-      </section>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Create an invoice</h2>
-          <p class="muted">Pick a product, set the quantity, then download the invoice PDF or send it straight to the
-            review queue.</p>
-        </div>
-        <form class="product-invoice" id="product-invoice">
-          <label>Product <select id="pi-product" required></select></label>
-          <label>Quantity <input type="number" id="pi-qty" min="1" step="1" required /></label>
-          <label>Variant <select id="pi-variant"></select></label>
-          <p class="muted" id="pi-hint"></p>
-          <div class="actions">
-            <a class="btn btn-outline" id="pi-download">Download PDF</a>
-            <button type="submit" class="btn btn-outline">Create and upload</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Upload an invoice</h2>
-          <p class="muted">
-            PDF or scanned image, or scan the paper with your phone camera. Extraction runs on the server.
-            Need a test receipt? <a href="/receipt-generator" class="text-link">Open the receipt generator</a>.
-          </p>
-        </div>
-
-        <form class="dropzone" data-upload="/api/invoices/upload">
-          <input type="file" id="invoice-file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" />
-
-          <label for="invoice-file">
-            <strong>Choose a file</strong> or drag it here
-          </label>
-
-          <div class="dropzone-actions">
-            <button type="submit" class="btn btn-outline">Upload</button>
-            <button type="button" class="btn btn-outline" data-scan>Scan with camera</button>
-          </div>
-        </form>
-
-        <pre class="result" hidden></pre>
-      </section>
-    </div>
-
-    <!-- Spectra: order automation -->
-    <div class="view" data-view="orders" hidden>
-      <section class="stats">
-        <div><span class="stat-num" data-stat="ord-total">–</span><span class="stat-label">Orders received</span></div>
-        <div><span class="stat-num" data-stat="ord-ready">–</span><span class="stat-label">Ready to approve</span></div>
-        <div><span class="stat-num" data-stat="ord-attention">–</span><span class="stat-label">Needs attention</span>
-        </div>
-        <div><span class="stat-num" data-stat="ord-done">–</span><span class="stat-label">Approved / rejected</span>
-        </div>
-      </section>
-
-      <section class="block">
-        <div class="block-head row">
-          <div>
-            <h2>Order queue</h2>
-            <p class="muted">Pending orders, checked against the product catalogue. Approve or reject each transaction.</p>
-          </div>
-          <div class="actions">
-            <button type="button" class="btn btn-solid" id="add-order">+ Add New Order</button>
-            <a href="/api/orders/export.csv" class="btn btn-outline" id="export-orders">Export approved (CSV)</a>
-          </div>
-        </div>
-        <div class="split">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Type</th>
-                <th>Customer / supplier</th>
-                <th class="num">Total</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="order-rows">
-              <tr>
-                <td colspan="6" class="muted">Loading…</td>
-              </tr>
-            </tbody>
-          </table>
-          <datalist id="catalog-names"></datalist>
-          <aside class="detail" id="order-detail">
-            <p class="muted">No order selected.</p>
-          </aside>
-        </div>
-      </section>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Upload an order</h2>
-          <p class="muted">PO, sales order, email printout or fax scan.</p>
-        </div>
-        <form class="dropzone" data-upload="/api/orders/upload">
-          <input type="file" id="order-file" name="file" accept=".pdf,image/*" />
-          <label for="order-file"><strong>Choose a file</strong> or drag it here</label>
-          <div class="dropzone-actions">
-            <button type="submit" class="btn btn-outline">Upload</button>
-            <button type="button" class="btn btn-outline" data-scan>Scan with camera</button>
-          </div>
-        </form>
-        <pre class="result" hidden></pre>
-      </section>
-    </div>
-
-    <!-- Koda: material requirements and production priorities -->
-    <div class="view" data-view="planning" hidden>
-      <section class="stats">
-        <div><span class="stat-num" data-stat="pln-orders">–</span><span class="stat-label">Customer orders</span></div>
-        <div><span class="stat-num" data-stat="pln-ready">–</span><span class="stat-label">Can start now</span></div>
-        <div><span class="stat-num" data-stat="pln-inbound">–</span><span class="stat-label">Waiting on delivery</span>
-        </div>
-        <div><span class="stat-num" data-stat="pln-short">–</span><span class="stat-label">Blocked by shortage</span>
-        </div>
-      </section>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Suggested build order</h2>
-          <p class="muted">Earliest-due orders get stock first. An order that cannot be completed reserves nothing.</p>
-        </div>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Order</th>
-              <th>Customer</th>
-              <th>Due</th>
-              <th>Priority</th>
-              <th>Status</th>
-              <th>What to do</th>
-            </tr>
-          </thead>
-          <tbody id="plan-rows">
-            <tr>
-              <td colspan="7" class="muted">Loading…</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Material requirements</h2>
-          <p class="muted">Gross need across all open orders against stock and scheduled deliveries.</p>
-        </div>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Material</th>
-              <th class="num">Required</th>
-              <th class="num">On hand</th>
-              <th class="num">Inbound</th>
-              <th class="num">Shortfall</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="material-rows"></tbody>
-        </table>
-      </section>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Purchase suggestions</h2>
-          <p class="muted">Materials that no scheduled delivery covers in time.</p>
-        </div>
-        <div class="cards" id="purchase-cards"></div>
-      </section>
-    </div>
-
-    <!-- EM Services: project tracker -->
-    <div class="view" data-view="projects" hidden>
-      <section class="stats">
-        <div><span class="stat-num" data-stat="prj-total">–</span><span class="stat-label">Active projects</span></div>
-        <div><span class="stat-num" data-stat="prj-open">–</span><span class="stat-label">Open tasks</span></div>
-        <div><span class="stat-num" data-stat="prj-overdue">–</span><span class="stat-label">Overdue</span></div>
-        <div><span class="stat-num" data-stat="prj-done">–</span><span class="stat-label">Tasks done</span></div>
-      </section>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Projects</h2>
-          <p class="muted">Select a project to open its task board.</p>
-        </div>
-        <div class="cards" id="project-cards"></div>
-      </section>
-
-      <section class="block" id="project-board" hidden>
-        <div class="block-head row">
-          <div>
-            <h2 id="board-title"></h2>
-            <p class="muted" id="board-meta"></p>
-          </div>
-          <div class="actions">
-            <button class="btn btn-outline" id="btn-summary">Summarize overdue</button>
-            <button class="btn btn-outline" id="btn-suggest">Suggest tasks</button>
-          </div>
-        </div>
-        <div class="ai-box" id="ai-box" hidden></div>
-
-        <div class="toolbar">
-          <label>Owner
-            <select id="owner-filter">
-              <option value="">Everyone</option>
-            </select>
-          </label>
-          <label class="check"><input type="checkbox" id="overdue-filter" /> Overdue only</label>
-          <form id="task-form" class="task-form">
-            <input name="title" placeholder="New task" required />
-            <select name="owner">
-              <option value="">Owner</option>
-            </select>
-            <input name="due_date" type="date" />
-            <button class="btn btn-outline" type="submit">Add</button>
-          </form>
-        </div>
-
-        <div class="board">
-          <div class="column" data-status="todo">
-            <h3>To do</h3>
-            <div class="tasks"></div>
-          </div>
-          <div class="column" data-status="in_progress">
-            <h3>In progress</h3>
-            <div class="tasks"></div>
-          </div>
-          <div class="column" data-status="done">
-            <h3>Done</h3>
-            <div class="tasks"></div>
-          </div>
-        </div>
-      </section>
-    </div>
-  </main>
-
-  <footer class="footer">
-    <span class="logo small">KODA</span>
-    <span class="muted">Workspace prototype · Koda · IT2134 × SCCCI</span>
-  </footer>
-
+  <!-- Confirmation & notice modal -->
   <div class="modal-backdrop" id="confirm-modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal-box">
       <p class="modal-eyebrow" id="modal-eyebrow">Confirm</p>
@@ -367,6 +634,35 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-outline" id="modal-cancel">Cancel</button>
         <button type="button" class="btn btn-solid" id="modal-confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6a Buyer Clarification Email modal -->
+  <div class="modal-backdrop" id="po-email-modal" hidden role="dialog" aria-modal="true" aria-labelledby="po-email-title">
+    <div class="modal-box modal-wide">
+      <div class="email-modal-head">
+        <div>
+          <p class="modal-eyebrow">6a Buyer Clarification Draft</p>
+          <h3 id="po-email-title">Clarification Email</h3>
+        </div>
+        <span class="pill" id="po-email-source">Template</span>
+      </div>
+      <div class="email-fields">
+        <label>To
+          <input id="po-email-to" type="email" placeholder="buyer@company.com" />
+        </label>
+        <label>Subject
+          <input id="po-email-subject" />
+        </label>
+        <label>Message
+          <textarea id="po-email-body" rows="11"></textarea>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="po-email-close">Close</button>
+        <a class="btn btn-outline" id="po-email-mailto" href="#">Open in Mail App</a>
+        <button type="button" class="btn btn-accent" id="po-email-copy">Copy Email</button>
       </div>
     </div>
   </div>

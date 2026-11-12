@@ -5,7 +5,14 @@
     { "sku": "DOC-USB-C", "name": "USB-C docking station", "unit_price": 189.0 },
     { "sku": "SSD-SM-1T", "name": "Samsung 990 Pro 1TB SSD", "unit_price": 165.0 },
     { "sku": "SW-CS-24", "name": "Cisco 24-port managed switch", "unit_price": 1320.0 },
-    { "sku": "CBL-C6-3M", "name": "Cat6 patch cable 3m", "unit_price": 4.2 }
+    { "sku": "CBL-C6-3M", "name": "Cat6 patch cable 3m", "unit_price": 4.2 },
+    { "sku": "KD-CH-2047", "name": "Ashby oak dining chair", "unit_price": 145.0 },
+    { "sku": "KD-TB-3110", "name": "Ashby extending dining table", "unit_price": 1280.0 },
+    { "sku": "KD-BN-1520", "name": "Ashby oak bench 1.5m", "unit_price": 420.0 },
+    { "sku": "KD-SB-4402", "name": "Harlow teak sideboard", "unit_price": 960.0 },
+    { "sku": "KD-CT-5208", "name": "Harlow round coffee table", "unit_price": 385.0 },
+    { "sku": "KD-ST-6031", "name": "Linden bar stool", "unit_price": 118.0 },
+    { "sku": "KD-LC-7105", "name": "Linden lounge chair", "unit_price": 540.0 }
   ],
   "orders": [
     {
