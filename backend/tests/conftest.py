@@ -1,6 +1,7 @@
 import pytest
 
 from app.ai import llm
+from app import database
 from app.services import documents, supabase_store
 
 
@@ -18,3 +19,12 @@ def no_supabase(monkeypatch):
 @pytest.fixture(autouse=True)
 def tmp_documents_csv(monkeypatch, tmp_path):
     monkeypatch.setattr(documents, "CSV_PATH", tmp_path / "documents.csv")
+
+
+@pytest.fixture(autouse=True)
+def no_database(monkeypatch):
+    """Tests run on the in-memory store; test_database.py opens its own SQLite file."""
+    monkeypatch.setenv("DATABASE_URL", "off")
+    database.close()
+    yield
+    database.close()

@@ -30,8 +30,10 @@ backend/
     routers/           API per tab: invoices, orders, projects
     services/          rules: invoice matching, order validation, project progress
     ai/                extraction (OCR / LLM) and task suggestions
-    data/              mock data (ERP, orders, projects)
-    store.py           in-memory store until Supabase
+    data/              mock data (ERP, orders, projects), seeds an empty database
+    models.py          SQLAlchemy models (one table per collection)
+    database.py        loads / saves the store: SQLite or Supabase Postgres
+    store.py           in-memory working copy the routers edit
   tests/               pytest
 frontend/              static HTML / CSS / JS (light + dark mode)
 docs/                  architecture, meeting notes, client Q&A
@@ -49,6 +51,15 @@ uvicorn app.main:app --reload
 ```
 
 Open http://localhost:8000 (frontend) or http://localhost:8000/docs (API docs).
+
+### Database
+
+Data is saved to SQLite at `backend/koda.db` by default (created and seeded with the mock data on
+first start; delete the file to reset). To use Supabase Postgres instead, copy `backend/.env.example`
+to `backend/.env` and set `DATABASE_URL` to the project's connection string (Project Settings >
+Database > Connection string, **Session pooler**). Tables are created on startup in a `workspace`
+schema, which Supabase's public REST API does not expose. `DATABASE_URL=off` keeps everything in
+memory. `GET /api/health` reports which one is in use.
 
 Run tests: `cd backend && pytest`
 

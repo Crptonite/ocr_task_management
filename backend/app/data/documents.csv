@@ -2,6 +2,23 @@ Document,Type,Company,Date,Amount,Status,Currency
 HHE-30551,Invoice,Hanoi Hardwood Exports,2026-10-19,6228.00,matched,USD
 DTW-7742,Invoice,Danang Textile Works,2026-10-23,2408.00,mismatch,USD
 TFF-5108,Invoice,Tuas Fasteners & Finishes,2026-10-25,2415.00,mismatch,SGD
+INV-0412-CLEAN-BIR-PNL-18,Invoice,Hanoi Hardwood Exports,2026-11-06,4818.00,matched,USD
+INV-0412-CLEAN-DRW-SL-45,Invoice,Hanoi Hardwood Exports,2026-11-06,1410.00,matched,USD
+INV-0418-CLEAN,Invoice,Danang Textile Works,2026-11-10,2160.00,matched,USD
+INV-QA123,Invoice,Spectra Pte Ltd,2026-11-10,179.85,mismatch,SGD
+INV-0412-CLEAN,Invoice,Hanoi Hardwood Exports,2026-11-11,6228.00,matched,USD
+INV-0412-CLEAN-BIR-PNL-18,Invoice,Hanoi Hardwood Exports,2026-11-11,4818.00,mismatch,USD
+INV-0412-CLEAN-BIR-PNL-18,Invoice,Hanoi Hardwood Exports,2026-11-11,4818.00,mismatch,USD
+INV-AUTO-20261111-002,Invoice,Unknown supplier,2018-01-01,92.80,mismatch,SGD
+19404064D,Invoice,IRMCS DEMO STORE,2022-08-21,116.07,mismatch,SGD
+INV-AUTO-20261111-001,Invoice,Nova Enterprises,2025-09-30,717.09,mismatch,SGD
+INV-AUTO-20261111-003,Invoice,Unknown supplier,2018-01-01,92.80,mismatch,SGD
+A02000044YA,Invoice,IRMCS DEMO STORE,2022-08-21,116.07,mismatch,SGD
+INV-AUTO-20261111-004,Invoice,HARBOR LANE CAFE,2026-11-11,2332.75,review,USD
+INV-AUTO-20261111-005,Invoice,HARBOR LANE CAFE,2026-11-11,2332.75,review,USD
+INV-0412-CLEAN-DRW-SL-45,Invoice,Hanoi Hardwood Exports,2026-11-10,1410.00,mismatch,USD
+INV-0412-CLEAN-BIR-PNL-18,Invoice,Hanoi Hardwood Exports,2026-11-06,4818.00,mismatch,USD
+CEE853E-2026,Invoice,HARBOR LANE CAFE,2026-11-11,2332.75,review,USD
 SO-24017,Sales order,Tampines Polyclinic IT,2026-10-21,11190.00,needs_attention,SGD
 PO-SP-0931,Purchase order,Ingram Micro Asia,2026-10-23,14040.00,ready,USD
 SO-24022,Sales order,Woodlands Logistics Pte Ltd,2026-10-26,3500.00,needs_attention,SGD

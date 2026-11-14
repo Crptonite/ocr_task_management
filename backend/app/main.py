@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import store
+from app import database, store
 from app.services import autofill, documents as documents_service, supabase_store
 from app.routers import documents, invoice_generator, invoice_queue, invoices, orders, planning, projects
 
@@ -14,7 +15,8 @@ FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    """Bring back invoices saved in Supabase so uploads survive a restart."""
+    """Load the store from the database, then bring back invoices saved through Supabase Storage."""
+    print(database.init())
     if supabase_store.enabled():
         try:
             known = {i["invoice_number"] for i in store.erp["invoices"]}
@@ -23,8 +25,10 @@ async def lifespan(_: FastAPI):
             store.erp["invoices"].extend(loaded)
         except Exception as exc:
             print(f"Supabase invoices not loaded: {exc}")
+    database.persist()
     documents_service.sync_csv()
     yield
+    database.close()
 
 
 app = FastAPI(title="Koda Workspace API", version="0.2.0", lifespan=lifespan)
@@ -35,6 +39,20 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Content-Disposition"],  # lets a separately hosted frontend read PDF filenames
 )
+
+
+
+@app.middleware("http")
+async def save_changes(request: Request, call_next):
+    """After each API call, write whatever it changed in the store to the database."""
+    response = await call_next(request)
+    if request.url.path.startswith("/api/") and database.active():
+        try:
+            await run_in_threadpool(database.persist)
+        except Exception as exc:  # the change is still in memory; the next request retries the write
+            print(f"Database write failed: {type(exc).__name__}: {exc}")
+    return response
+
 
 app.include_router(documents.router)  # combined document list + CSV
 app.include_router(invoices.router)  # Koda: invoice checking
@@ -47,7 +65,7 @@ app.include_router(planning.router)  # Koda: material requirements and productio
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "database": database.backend_name()}
 
 
 # Clean URLs for the standalone pages (the .html paths keep working through the static mount).
