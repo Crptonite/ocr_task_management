@@ -1,16 +1,26 @@
 """Tests for Aeric's 6a (Part 1) PO Intake, fuzzy SKU matching, validation & clarification email."""
 import io
 
+import pytest
 from fastapi.testclient import TestClient
 from fpdf import FPDF
 
 from app import store
 from app.ai import llm
-from app.ai import po_parser
 from app.main import app
-from app.services.po_intake import SAMPLES
+from app.services import documents, supabase_store
+from aeric import po_parser
+from aeric.service import SAMPLES
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_aeric_tests(monkeypatch, tmp_path):
+    """Mirror backend/tests/conftest.py so tests inside aeric/ never hit live APIs or repo CSVs."""
+    monkeypatch.setattr(llm, "api_key", lambda: None)
+    monkeypatch.setattr(supabase_store, "enabled", lambda: False)
+    monkeypatch.setattr(documents, "CSV_PATH", tmp_path / "documents.csv")
 
 
 def _make_pdf(text: str) -> bytes:

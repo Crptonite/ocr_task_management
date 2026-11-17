@@ -1,16 +1,23 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
+import sys
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+ROOT_DIR = Path(__file__).resolve().parents[2]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from app import store
 from app.services import autofill, documents as documents_service, supabase_store
-from app.routers import documents, invoice_generator, invoice_queue, invoices, orders, planning, po_intake, projects
+from app.routers import documents, invoice_generator, invoice_queue, invoices, orders, planning, projects
+from aeric import router as po_intake
 
-FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+FRONTEND_DIR = ROOT_DIR / "frontend"
+AERIC_DIR = ROOT_DIR / "aeric"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -70,6 +77,10 @@ def _page(filename: str):
 for route, filename in PAGES.items():
     app.add_api_route(route, _page(filename), methods=["GET"], include_in_schema=False)
 
+
+# Mount Aeric's 6a frontend script before the catch-all "/" static mount.
+if AERIC_DIR.exists():
+    app.mount("/aeric", StaticFiles(directory=AERIC_DIR), name="aeric")
 
 # Serve the static frontend at / (keep this last so /api routes win).
 if FRONTEND_DIR.exists():

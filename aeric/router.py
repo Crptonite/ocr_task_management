@@ -13,10 +13,10 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from app import store
-from app.ai.po_parser import parse_po
 from app.services import documents
 from app.services.invoice_queue import now_iso, transaction_id
-from app.services.po_intake import SAMPLES, clarification_email, validate_po
+from aeric.po_parser import parse_po
+from aeric.service import SAMPLES, clarification_email, validate_po
 
 router = APIRouter(prefix="/api/po-intake", tags=["po intake (Koda 6a)"])
 
