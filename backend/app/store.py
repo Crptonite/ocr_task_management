@@ -1,7 +1,8 @@
-"""In-memory store for the mock data.
+"""In-memory store the routers read and edit.
 
-Edits (approvals, new tasks, status changes) live until the server restarts.
-Replace with SQLAlchemy + Supabase Postgres once the schema is agreed.
+At startup app.database loads it from the database (SQLite or Supabase Postgres, see
+app/models.py) and writes changes back after every API request. reset() loads the mock JSON,
+which seeds an empty database and gives tests a clean start.
 """
 import json
 from pathlib import Path

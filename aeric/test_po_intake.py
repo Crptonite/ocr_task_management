@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from fpdf import FPDF
 
-from app import store
+from app import database, store
 from app.ai import llm
 from app.main import app
 from app.services import documents, supabase_store
@@ -17,10 +17,14 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def _isolate_aeric_tests(monkeypatch, tmp_path):
-    """Mirror backend/tests/conftest.py so tests inside aeric/ never hit live APIs or repo CSVs."""
+    """Mirror backend/tests/conftest.py so tests inside aeric/ never hit live APIs, DBs, or repo CSVs."""
     monkeypatch.setattr(llm, "api_key", lambda: None)
     monkeypatch.setattr(supabase_store, "enabled", lambda: False)
     monkeypatch.setattr(documents, "CSV_PATH", tmp_path / "documents.csv")
+    monkeypatch.setenv("DATABASE_URL", "off")
+    database.close()
+    yield
+    database.close()
 
 
 def _make_pdf(text: str) -> bytes:

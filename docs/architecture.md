@@ -21,7 +21,17 @@ Tests across all layers                                                [Wesley]
 ## API (v0.2)
 
 The app is one workspace for three problem statements. Each has its own router in `backend/app/routers/` and a tab in the frontend.
-Data is mock JSON in `backend/app/data/`, held in memory by `app/store.py` (edits reset on restart) until SQLAlchemy + Supabase replace it.
+Routers edit an in-memory working copy in `app/store.py`. `app/database.py` loads it at startup and
+writes changed collections back after each API request, using the SQLAlchemy models in `app/models.py`:
+SQLite (`backend/koda.db`) by default, or Supabase Postgres when `DATABASE_URL` is set (tables in the
+`workspace` schema). An empty database is seeded from the mock JSON in `backend/app/data/`.
+
+| Table | Holds |
+| --- | --- |
+| `purchase_orders`, `supplier_invoices` | Koda invoice matching (lines as JSON) |
+| `catalog_items`, `orders` | Spectra orders; approval, invoice draft and history in `extra` |
+| `members`, `projects`, `tasks` | EM Services project tracker |
+| `products`, `materials`, `inbound_deliveries`, `demand` | Koda production planning |
 
 | Method | Path | Description |
 | --- | --- | --- |
