@@ -1,0 +1,127 @@
+{% extends "layout.html" %}
+
+{% block title %}Mechanic RFQ (View Only) - {{ job_card['job_card_number'] }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb Navigation -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('rfq_merging') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page"><strong>Step 1: Mechanic RFQ</strong></li>
+        <li class="breadcrumb-item text-muted">Step 2: Spare Parts RFQ</li>
+        <li class="breadcrumb-item text-muted">Step 3: Merge RFQs</li>
+    </ol>
+</nav>
+
+<div class="mb-3">
+    <a href="{{ url_for('rfq_merging') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<!-- Alert: View Only -->
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-info-circle"></i> <strong>View Only:</strong> This RFQ was created by the Mechanic Department. Mechanic-side pricing is hidden.
+</div>
+
+<!-- Job Card Info Header -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">
+            <i class="bi bi-wrench"></i> Mechanic Department RFQ - Job Card: {{ job_card['job_card_number'] }}
+        </h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <strong>Customer:</strong> {{ job_card['customer_name'] }}
+            </div>
+            <div class="col-md-4">
+                <strong>Vehicle:</strong> {{ job_card['vehicle_model'] }}
+            </div>
+            <div class="col-md-4">
+                <strong>Date:</strong> {{ job_card['date_created'] }}
+            </div>
+        </div>
+        {% if job_card['issue_description'] %}
+        <div class="row mt-2">
+            <div class="col-12">
+                <strong>Issue:</strong> {{ job_card['issue_description'] }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Labour Services Section -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-tools"></i> Labour Services</h5>
+    </div>
+    <div class="card-body">
+        {% if labor_services %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Service Name</th>
+                        <th>Hours</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in labor_services %}
+                    <tr>
+                        <td><strong>{{ service['service_name'] }}</strong></td>
+                        <td>{{ service['quantity'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted"><em>No labour services added by Mechanic Department</em></p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Non-Stockable Parts Section -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Non-Stockable Parts (Special Order)</h5>
+    </div>
+    <div class="card-body">
+        {% if nonstockable_parts %}
+        <div class="table-responsive">
+            <table class="table table-hover table-warning">
+                <thead>
+                    <tr>
+                        <th>Part Name</th>
+                        <th>Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in nonstockable_parts %}
+                    <tr>
+                        <td><strong>{{ part['part_name'] }}</strong></td>
+                        <td>{{ part['quantity'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted"><em>No non-stockable parts required</em></p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex justify-content-between mt-4">
+    <a href="{{ url_for('rfq_merging') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+    <a href="{{ url_for('spare_parts_rfq', job_card_id=job_card['id']) }}" class="btn btn-primary btn-lg">
+        <i class="bi bi-arrow-right"></i> Next: View Spare Parts RFQ
+    </a>
+</div>
+{% endblock %}

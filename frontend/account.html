@@ -1,0 +1,90 @@
+{% extends "layout.html" %}
+{% block title %}Account Settings{% endblock %}
+
+{% block content %}
+<!-- Center account management card -->
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <!-- Card header with info color -->
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">Account Settings</h4>
+            </div>
+            <div class="card-body">
+                <!-- Account selection dropdown for admins -->
+                <div class="mb-3">
+                    <label for="userSelect" class="form-label">Select Account</label>
+                    <select class="form-select" id="userSelect" onchange="location.href=`{{ url_for('account') }}?user_id=${this.value}`">
+                        {% for user in staff_users %}
+                        <option value="{{ user['id'] }}" {% if user['id'] == target_user_id %}selected{% endif %}>{{ user['username'] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Account update form - POST request -->
+                <form method="POST" action="{{ url_for('account') }}" id="accountForm">
+                    <input type="hidden" name="user_id" value="{{ target_user_id }}">
+                    
+                    <!-- Username field - editable for admins -->
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" value="{{ current_username }}" required>
+                    </div>
+                    
+                    <!-- Email field - editable -->
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address *</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ current_email or '' }}" required>
+                    </div>
+                    
+                    <!-- Phone number field - optional, numbers only -->
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" pattern="[0-9]*" inputmode="numeric" placeholder="e.g., 1234567890" value="{{ current_phone or '' }}">
+                        <div class="form-text">Numbers only (optional)</div>
+                    </div>
+                    
+                    <!-- Save and Cancel buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('home') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-info">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Quick links to other account management pages -->
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6>Account Management:</h6>
+                <ul class="list-unstyled mb-0">
+                    <li><a href="{{ url_for('profile') }}" class="text-decoration-none">Change Password</a></li>
+                    <li><a href="{{ url_for('logout') }}" class="text-decoration-none">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Phone number validation auto remove non numeric characters
+document.getElementById('phone').addEventListener('input', function(e) {
+    // Remove any non-numeric characters as user types
+    this.value = this.value.replace(/[^0-9]/g, '');
+});
+
+// Form validation on submit
+document.getElementById('accountForm').addEventListener('submit', function(e) {
+    const email = document.getElementById('email').value;
+    
+    // Validate email is not empty
+    if (!email) {
+        e.preventDefault();
+        alert('Email is required');
+        return false;
+    }
+    
+    return true;
+});
+</script>
+{% endblock %}

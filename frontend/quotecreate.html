@@ -1,0 +1,360 @@
+{% extends "layout.html" %}
+{% block title %}Ban Hock Hin - Quotation Creation{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <a href="{{ url_for('quote_mgmt') }}">
+                <button type="button" class="btn btn-primary">← Back</button>
+            </a>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn btn-success" onclick="confirmQuotation()">Confirm</button>
+        </div>
+    </div>
+
+    <div class="text-center mb-4">
+        <h2>Create Quotation</h2>
+    </div>
+
+    <!-- import merged RFQ and generate quotation buttons -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="section-card">
+                <div class="section-header">
+                    <span class="badge bg-primary">Import</span>
+                </div>
+                <div class="section-content" id="importContent">
+                    <p>Press Import to import merged RFQ</p>
+                    <button type="button" class="btn btn-primary" onclick="openRFQModal()">Import</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="section-card">
+                <div class="section-header">
+                    <span class="badge bg-primary">Generate</span>
+                </div>
+                <div class="section-content" id="generateContent">
+                    <p>Press Generate to create quotation</p>
+                    <button type="button" class="btn btn-primary" onclick="generateQuotation()">Generate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- RFQ modal -->
+<div id="rfqModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Merged RFQ List</h3>
+            <span class="modal-close" onclick="closeRFQModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="table-container">
+                <table class="table table-bordered table-hover" id="rfqTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Job Card</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" class="text-center">No RFQ data available</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+.modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 900px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+}
+.modal-close {
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.modal-close:hover { color: #f00; }
+</style>
+
+<script>
+function openRFQModal() {
+    document.getElementById('rfqModal').style.display = 'block';
+    loadRFQs();
+}
+
+function closeRFQModal() {
+    document.getElementById('rfqModal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const rfqModal = document.getElementById('rfqModal');
+    if (event.target == rfqModal) rfqModal.style.display = 'none';
+}
+
+function loadRFQs() {
+    fetch('/api/rfqs')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.querySelector('#rfqTable tbody');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No RFQ data available</td></tr>';
+                return;
+            }
+            
+            data.forEach(rfq => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${rfq.job_card_number || ('#' + rfq.id)}</td>
+                    <td>${rfq.name}</td>
+                    <td>${rfq.status || 'Merged'}</td>
+                    <td>${rfq.created_date || '-'}</td>
+                    <td><button class="btn btn-sm btn-primary" onclick="selectRFQ(${JSON.stringify(rfq).replace(/"/g, '&quot;')})">Select</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading RFQs');
+        });
+}
+
+function selectRFQ(rfqData) {
+    const importContent = document.getElementById('importContent');
+    
+    let partsTableHTML = '';
+    if (rfqData.parts && rfqData.parts.length > 0) {
+        partsTableHTML = `
+            <h6 style="margin: 20px 0 10px 0; font-weight: 600; text-decoration: underline;">ITEMS & SERVICES</h6>
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 15px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #333;">
+                        <th style="padding: 8px; text-align: left;">Description</th>
+                        <th style="padding: 8px; text-align: left;">Type</th>
+                        <th style="padding: 8px; text-align: center;">Qty</th>
+                        <th style="padding: 8px; text-align: right;">Price</th>
+                        <th style="padding: 8px; text-align: right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+        
+        rfqData.parts.forEach(part => {
+            const parsedQty = parseFloat(part.quantity);
+            const qtyForCalc = Number.isFinite(parsedQty) ? parsedQty : 1;
+            const partTotalValue = (part.line_total !== undefined && part.line_total !== null)
+                ? parseFloat(part.line_total)
+                : (qtyForCalc * parseFloat(part.price || 0));
+            const partTotal = (Number.isFinite(partTotalValue) ? partTotalValue : 0).toFixed(2);
+            const unitPrice = parseFloat(part.price || 0);
+            partsTableHTML += `
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <td style="padding: 8px;">${part.description}</td>
+                    <td style="padding: 8px;">${part.manufacturer}</td>
+                    <td style="padding: 8px; text-align: center;">${part.quantity}</td>
+                    <td style="padding: 8px; text-align: right;">SGD ${unitPrice.toFixed(2)}</td>
+                    <td style="padding: 8px; text-align: right;">SGD ${partTotal}</td>
+                </tr>`;
+        });
+        partsTableHTML += `</tbody></table>`;
+    }
+    
+    const safeTotal = parseFloat(rfqData.total || 0);
+
+    importContent.innerHTML = `
+        <div style="background: white; padding: 20px; border: 1px solid #ddd; border-radius: 4px; max-height: 700px; overflow-y: auto; width: 100%;">
+            <div style="border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px;">
+                <h5 style="margin: 0 0 5px 0; font-weight: bold;">BAN HOCK HIN</h5>
+                <p style="margin: 0; font-size: 12px; color: #666;">Request for Quotation (RFQ)</p>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; font-size: 13px;">
+                <div><p style="margin: 0 0 3px 0; font-weight: 600;">Job Card</p><p style="margin: 0; border-bottom: 1px solid #333; padding-bottom: 5px;">${rfqData.job_card_number || ('#' + rfqData.id)}</p></div>
+                <div><p style="margin: 0 0 3px 0; font-weight: 600;">Date Created</p><p style="margin: 0; border-bottom: 1px solid #333; padding-bottom: 5px;">${rfqData.created_date}</p></div>
+            </div>
+            <div style="margin-bottom: 20px; font-size: 13px;">
+                <h6 style="margin: 0 0 10px 0; font-weight: 600; text-decoration: underline;">CUSTOMER INFORMATION</h6>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div><p style="margin: 0 0 2px 0; font-weight: 600;">Customer Name</p><p style="margin: 0; padding: 5px 0; border-bottom: 1px solid #ccc;">${rfqData.name}</p></div>
+                    <div><p style="margin: 0 0 2px 0; font-weight: 600;">Status</p><p style="margin: 0; padding: 5px 0; border-bottom: 1px solid #ccc;">${rfqData.status || 'Merged'}</p></div>
+                    <div><p style="margin: 0 0 2px 0; font-weight: 600;">Source ID</p><p style="margin: 0; padding: 5px 0; border-bottom: 1px solid #ccc;">${rfqData.source_id || rfqData.id}</p></div>
+                </div>
+            </div>
+            <div style="margin-bottom: 20px; font-size: 13px;">
+                <h6 style="margin: 0 0 10px 0; font-weight: 600; text-decoration: underline;">MOTORCYCLE INFORMATION</h6>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div><p style="margin: 0 0 2px 0; font-weight: 600;">Vehicle</p><p style="margin: 0; padding: 5px 0; border-bottom: 1px solid #ccc;">${rfqData.model || '-'}</p></div>
+                    <div><p style="margin: 0 0 2px 0; font-weight: 600;">Type</p><p style="margin: 0; padding: 5px 0; border-bottom: 1px solid #ccc;">Merged RFQ</p></div>
+                </div>
+            </div>
+            ${partsTableHTML}
+            <div style="border-top: 2px solid #333; padding-top: 15px; margin-bottom: 20px; text-align: right;">
+                <p style="margin: 0; font-size: 13px;"><strong>Total:</strong> <span style="font-size: 16px; font-weight: bold;">SGD ${safeTotal.toFixed(2)}</span></p>
+            </div>
+            <div style="text-align: center;"><button type="button" class="btn btn-primary btn-sm" onclick="openRFQModal()">Change RFQ</button></div>
+        </div>`;
+    
+    window.currentRFQ = rfqData;
+    closeRFQModal();
+}
+
+function generateQuotation() {
+    if (!window.currentRFQ) { alert('Please select an RFQ first'); return; }
+    
+    const rfqData = window.currentRFQ;
+    const safeTotal = parseFloat(rfqData.total || 0);
+    const generateContent = document.getElementById('generateContent');
+    const today = new Date();
+    const quotationDate = today.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-');
+    const quotationNumber = 'QT-' + Date.now();
+    
+    let partsTableHTML = '';
+    if (rfqData.parts && rfqData.parts.length > 0) {
+        partsTableHTML = `<table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 15px;">
+            <thead><tr style="border-bottom: 2px solid #333; background-color: #f5f5f5;">
+                <th style="padding: 10px; text-align: left;">Description</th>
+                <th style="padding: 10px; text-align: center;">Qty</th>
+                <th style="padding: 10px; text-align: right;">Unit Price</th>
+                <th style="padding: 10px; text-align: right;">Total</th>
+            </tr></thead><tbody>`;
+        
+        rfqData.parts.forEach(part => {
+            const parsedQty = parseFloat(part.quantity);
+            const qtyForCalc = Number.isFinite(parsedQty) ? parsedQty : 1;
+            const partTotalValue = (part.line_total !== undefined && part.line_total !== null)
+                ? parseFloat(part.line_total)
+                : (qtyForCalc * parseFloat(part.price || 0));
+            const safePartTotal = Number.isFinite(partTotalValue) ? partTotalValue : 0;
+
+            partsTableHTML += `<tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px;">${part.description}</td>
+                <td style="padding: 10px; text-align: center;">${part.quantity}</td>
+                <td style="padding: 10px; text-align: right;">SGD ${parseFloat(part.price || 0).toFixed(2)}</td>
+                <td style="padding: 10px; text-align: right; font-weight: 600;">SGD ${safePartTotal.toFixed(2)}</td>
+            </tr>`;
+        });
+        partsTableHTML += `</tbody></table>`;
+    }
+    
+    generateContent.innerHTML = `
+        <div style="background: white; padding: 30px; border: 1px solid #ddd; border-radius: 4px; max-height: 700px; overflow-y: auto; width: 100%;">
+            <div style="margin-bottom: 30px; border-bottom: 3px solid #007bff; padding-bottom: 20px;">
+                <h2 style="margin: 0 0 5px 0; color: #007bff; font-size: 28px; font-weight: bold;">Ban Hock Hin</h2>
+                <p style="margin: 0; font-size: 13px; color: #666;">123 Bukit Merah Lane, Singapore 159835</p>
+                <p style="margin: 3px 0 0 0; font-size: 13px; color: #666;">Tel: +65 6273 1234 | Email: info@banhochhin.com</p>
+            </div>
+            <div style="text-align: center; margin-bottom: 25px;"><h3 style="margin: 0; font-size: 20px; font-weight: bold; color: #333;">QUOTATION</h3></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; font-size: 13px;">
+                <div>
+                    <p style="margin: 0 0 8px 0; font-weight: 600; color: #333;">Bill To:</p>
+                    <p style="margin: 0; font-weight: 600;">${rfqData.name}</p>
+                    <p style="margin: 3px 0; color: #666;">${rfqData.email}</p>
+                    <p style="margin: 3px 0; color: #666;">Phone: ${rfqData.phone}</p>
+                </div>
+                <div style="text-align: right;">
+                    <p style="margin: 0; font-size: 12px; color: #666;">
+                        <strong>Quotation No.:</strong> ${quotationNumber}<br>
+                        <strong>Date:</strong> ${quotationDate}<br>
+                        <strong>Valid Until:</strong> ${new Date(today.getTime() + 30*24*60*60*1000).toLocaleDateString('en-GB')}
+                    </p>
+                </div>
+            </div>
+            <div style="background-color: #f5f5f5; padding: 15px; margin-bottom: 25px; border-left: 4px solid #007bff;">
+                <h6 style="margin: 0 0 10px 0; font-weight: 600; color: #333;">Vehicle Details:</h6>
+                <p style="margin: 0; font-size: 13px;"><strong>${rfqData.brand} ${rfqData.model}</strong></p>
+            </div>
+            <h6 style="margin: 0 0 15px 0; font-weight: 600; color: #333; font-size: 14px;">Items & Services:</h6>
+            ${partsTableHTML}
+            <div style="border-top: 2px solid #333; padding-top: 15px; margin-top: 20px;">
+                <div style="display: flex; justify-content: flex-end;">
+                    <div style="width: 200px;">
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 8px;"><span>Subtotal:</span><span style="text-align: right;">SGD ${safeTotal.toFixed(2)}</span></div>
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 8px;"><span>GST (0%):</span><span style="text-align: right;">SGD 0.00</span></div>
+                        <div style="border-top: 2px solid #333; padding-top: 10px; display: grid; grid-template-columns: 1fr auto; gap: 10px; font-weight: bold;"><span>TOTAL:</span><span style="text-align: right;">SGD ${safeTotal.toFixed(2)}</span></div>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #666; text-align: center;">
+                <p style="margin: 0;">Thank you for your business. This quotation is valid for 30 days from the date issued.</p>
+            </div>
+        </div>`;
+}
+
+function confirmQuotation() {
+    if (!window.currentRFQ) { alert('Please select an RFQ first'); return; }
+    
+    const rfqData = window.currentRFQ;
+    if (!rfqData.email || !rfqData.phone) {
+        alert('Selected RFQ is missing customer email or phone. Please complete customer details in RFQ creation first.');
+        return;
+    }
+
+    const safeTotal = parseFloat(rfqData.total || 0);
+    const quotationNumber = 'QT-' + Date.now();
+    const today = new Date();
+    const createdDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} ${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}:${String(today.getSeconds()).padStart(2, '0')}`;
+    
+    const quotationData = {
+        quotation_number: quotationNumber,
+        customer_name: rfqData.name,
+        customer_email: rfqData.email,
+        phone_number: rfqData.phone,
+        motorcycle_brand: rfqData.brand,
+        motorcycle_model: rfqData.model,
+        total_price: safeTotal,
+        created_date: createdDate,
+        parts: rfqData.parts
+    };
+    
+    fetch('/api/create-quotation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quotationData)
+    })
+    .then(response => {
+        if (response.ok) window.location.href = '{{ url_for("quote_mgmt") }}';
+        else alert('Error creating quotation');
+    })
+    .catch(error => { console.error('Error:', error); alert('Error creating quotation'); });
+}
+
+</script>
+{% endblock %}

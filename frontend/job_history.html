@@ -1,0 +1,117 @@
+{% extends "layout.html" %}
+{% block title %}RFQ History - FixMe.Pro{% endblock %}
+{% block content %}
+<!-- Page header -->
+<div class="page-header mb-4">
+    <h1>RFQ History</h1>
+    <p class="text-muted">View and search past RFQs for AI analysis</p>
+</div>
+
+<!-- Search card -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('job_history') }}">
+            <div class="input-group">
+                <span class="input-group-text">🔍</span>
+                <input type="text" class="form-control" name="search" placeholder="Search by customer, vehicle, or issue..." value="{{ search_query|default('', true) }}">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Statistics row -->
+<div class="row g-4 mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-1">Total RFQs</p>
+                        <h3 class="mb-0">{{ total_jobs|default(0, true) }}</h3>
+                    </div>
+                    <div class="text-primary" style="font-size: 2rem;">📊</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Job history list card -->
+<div class="card">
+    <div class="card-body">
+        {% if jobs %}
+        <div class="list-group list-group-flush">
+            {% for job in jobs %}
+            <div class="list-group-item job-item" onclick="toggleJobDetails('{{ job.id }}')">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ job.customer_name }}</h6>
+                        <div class="text-muted small">
+                            <span>{{ job.vehicle_info }}</span>
+                            <span class="mx-2">•</span>
+                            <span>{{ job.job_date }}</span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-secondary">Record</span>
+                        <div class="small text-muted"><span class="expand-icon">▼</span></div>
+                    </div>
+                </div>
+                <div class="job-details mt-3" id="job-{{ job.id }}" style="display: none;">
+                    <hr class="my-2">
+                    {% if job.issues %}
+                    <div class="mb-2">
+                        <strong>Issues:</strong>
+                        <p class="text-muted mb-1">{{ job.issues }}</p>
+                    </div>
+                    {% endif %}
+                    {% if job.parts_used %}
+                    <div>
+                        <strong>Parts Used:</strong>
+                        <p class="text-muted mb-0">{{ job.parts_used }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <p class="text-muted mb-4">
+                {% if search_query %}
+                    No jobs found matching "{{ search_query }}"
+                {% else %}
+                    No job history available yet
+                {% endif %}
+            </p>
+            {% if search_query %}
+            <a href="{{ url_for('job_history') }}" class="btn btn-secondary">Clear Search</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .job-item { border-left: 4px solid transparent; transition: all 0.3s; cursor: pointer; padding: 1rem; }
+    .job-item:hover { background-color: #f8fafc; border-left-color: #3b82f6; }
+    .expand-icon { display: inline-block; transition: transform 0.3s; }
+    .job-item.expanded .expand-icon { transform: rotate(180deg); }
+    .job-details { background-color: #f8fafc; padding: 1rem; border-radius: 8px; }
+</style>
+
+<script>
+function toggleJobDetails(jobId) {
+    const detailsElement = document.getElementById('job-' + jobId);
+    const jobItem = detailsElement.closest('.job-item');
+    if (detailsElement.style.display === 'none') {
+        detailsElement.style.display = 'block';
+        jobItem.classList.add('expanded');
+    } else {
+        detailsElement.style.display = 'none';
+        jobItem.classList.remove('expanded');
+    }
+}
+</script>
+{% endblock %}

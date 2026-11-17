@@ -19,6 +19,11 @@ INV-AUTO-20261111-005,Invoice,HARBOR LANE CAFE,2026-11-11,2332.75,review,USD
 INV-0412-CLEAN-DRW-SL-45,Invoice,Hanoi Hardwood Exports,2026-11-10,1410.00,mismatch,USD
 INV-0412-CLEAN-BIR-PNL-18,Invoice,Hanoi Hardwood Exports,2026-11-06,4818.00,mismatch,USD
 CEE853E-2026,Invoice,HARBOR LANE CAFE,2026-11-11,2332.75,review,USD
+INV-PO-SP-0931,Invoice,Spectra Pte Ltd,2026-11-10,15303.60,mismatch,USD
+PO-2026-0141,Invoice,Seller name,2026-10-23,13300.00,mismatch,EUR
+INV-AUTO-20261114-001,Invoice,Nova Enterprises,2025-09-30,717.09,mismatch,SGD
+INV-0412-QTY-BIR-PNL-18,Invoice,Hanoi Hardwood Exports,2026-11-14,5299.80,mismatch,USD
+INV-AUTO-20261115-001,Invoice,Nova Enterprises,2025-09-30,717.09,mismatch,USD
 SO-24017,Sales order,Tampines Polyclinic IT,2026-10-21,11190.00,needs_attention,SGD
 PO-SP-0931,Purchase order,Ingram Micro Asia,2026-10-23,14040.00,ready,USD
 SO-24022,Sales order,Woodlands Logistics Pte Ltd,2026-10-26,3500.00,needs_attention,SGD

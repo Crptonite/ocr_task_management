@@ -1,0 +1,306 @@
+{% extends "layout.html" %}
+
+{% block title %}Merged RFQ - {{ job_card['job_card_number'] }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('rfq_merging') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<!-- Job Card Info Header -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <h4 class="mb-0">
+            <i class="bi bi-file-earmark-check"></i> Merged RFQ - Job Card: {{ job_card['job_card_number'] }}
+        </h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <strong>Customer:</strong> {{ job_card['customer_name'] }}
+            </div>
+            <div class="col-md-3">
+                <strong>Vehicle:</strong> {{ job_card['vehicle_model'] }}
+            </div>
+            <div class="col-md-3">
+                <strong>Date:</strong> {{ job_card['date_created'] }}
+            </div>
+            <div class="col-md-3">
+                <strong>Status:</strong>
+                {% if job_card['status'] == 'Finalized' %}
+                    <span class="badge bg-primary">
+                        <i class="bi bi-clipboard-check"></i> {{ job_card['status'] }}
+                    </span>
+                {% else %}
+                    <span class="badge bg-success">
+                        <i class="bi bi-check-circle"></i> {{ job_card['status'] }}
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add New Item (only if not finalized) -->
+{% if job_card['status'] != 'Finalized' %}
+<div class="card shadow-sm mb-4 border-primary">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add New Item to Merged RFQ</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="action" value="add_item">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label for="item_type" class="form-label">Item Type <span class="text-danger">*</span></label>
+                    <select class="form-select" id="item_type" name="item_type" required>
+                        <option value="">Select...</option>
+                        <option value="Labor">Labour</option>
+                        <option value="Spare Part">Spare Part</option>
+                        <option value="Non-Stockable">Non-Stockable</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="item_name" class="form-label">Item Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="item_name" name="item_name" 
+                           placeholder="Enter item name" required>
+                </div>
+                <div class="col-md-2">
+                    <label for="quantity_add" class="form-label">Quantity <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="quantity_add" name="quantity" 
+                           placeholder="e.g., 1 or 4L" required>
+                </div>
+                <div class="col-md-2">
+                    <label for="unit_price_add" class="form-label">Unit Price ($) <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" id="unit_price_add" name="unit_price" 
+                           step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="col-md-1">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="is_nonstockable_add" name="is_nonstockable">
+                        <label class="form-check-label" for="is_nonstockable_add">
+                            NS
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Merged Items Table -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-list-check"></i> Merged RFQ Items</h5>
+    </div>
+    <div class="card-body">
+        {% if merged_items %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Type</th>
+                        <th>Item Name</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total Price</th>
+                        {% if job_card['status'] != 'Finalized' %}
+                        <th class="text-center">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in merged_items %}
+                    <tr class="{% if item['is_nonstockable'] %}table-warning{% endif %}">
+                        <td>
+                            {% if item['item_type'] == 'Labor' %}
+                                <span class="badge bg-info">
+                                    <i class="bi bi-tools"></i> Labour
+                                </span>
+                            {% elif item['item_type'] == 'Spare Part' %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-box"></i> {{ item['item_type'] }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-exclamation-triangle"></i> {{ item['item_type'] }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ item['item_name'] }}</strong>
+                            {% if item['is_nonstockable'] %}
+                            <span class="badge bg-warning text-dark ms-1">NS</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if job_card['status'] != 'Finalized' %}
+                            <form method="POST" class="d-inline edit-form-{{ item['id'] }}">
+                                <input type="hidden" name="action" value="update_item">
+                                <input type="hidden" name="item_id" value="{{ item['id'] }}">
+                                <input type="text" 
+                                       name="quantity" 
+                                       value="{{ item['quantity'] }}" 
+                                       class="form-control form-control-sm d-inline-block" 
+                                       style="width: 80px;"
+                                       required>
+                            </form>
+                            {% else %}
+                            {{ item['quantity'] }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if job_card['status'] != 'Finalized' %}
+                            <form method="POST" class="d-inline edit-form-{{ item['id'] }}">
+                                <input type="hidden" name="action" value="update_item">
+                                <input type="hidden" name="item_id" value="{{ item['id'] }}">
+                                <input type="hidden" name="quantity" value="{{ item['quantity'] }}">
+                                <div class="input-group input-group-sm" style="width: 120px;">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" 
+                                           name="unit_price" 
+                                           value="{{ "%.2f"|format(item['unit_price']) }}" 
+                                           class="form-control" 
+                                           step="0.01"
+                                           min="0.01"
+                                           required>
+                                </div>
+                            </form>
+                            {% else %}
+                            ${{ "%.2f"|format(item['unit_price']) }}
+                            {% endif %}
+                        </td>
+                        <td><strong class="text-success">${{ "%.2f"|format(item['total_price']) }}</strong></td>
+                        {% if job_card['status'] != 'Finalized' %}
+                        <td class="text-center">
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-primary" 
+                                    onclick="submitEditForm({{ item['id'] }})"
+                                    title="Update">
+                                <i class="bi bi-check"></i>
+                            </button>
+                            <form method="POST" class="d-inline" onsubmit="return confirm('Delete this item?');">
+                                <input type="hidden" name="action" value="delete_item">
+                                <input type="hidden" name="item_id" value="{{ item['id'] }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-secondary">
+                    <tr class="fw-bold">
+                        <td colspan="{% if job_card['status'] != 'Finalized' %}4{% else %}4{% endif %}" class="text-end">
+                            <h5 class="mb-0">Grand Total:</h5>
+                        </td>
+                        <td colspan="2">
+                            <h5 class="mb-0 text-success">${{ "%.2f"|format(total_amount) }}</h5>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Item Statistics -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card border-info">
+                    <div class="card-body text-center">
+                        <h6 class="text-info"><i class="bi bi-tools"></i> Labour</h6>
+                        <h3>{{ merged_items|selectattr('item_type', 'equalto', 'Labor')|list|length }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h6 class="text-success"><i class="bi bi-box"></i> Spare Parts</h6>
+                        <h3>{{ merged_items|selectattr('item_type', 'equalto', 'Spare Part')|list|length }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h6 class="text-warning"><i class="bi bi-exclamation-triangle"></i> Non-Stockable</h6>
+                        <h3>{{ merged_items|selectattr('item_type', 'equalto', 'Non-Stockable')|list|length }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <h6 class="text-primary"><i class="bi bi-list-ol"></i> Total Items</h6>
+                        <h3>{{ merged_items|length }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> No items in merged RFQ. This shouldn't happen - please go back and merge again.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Action Buttons -->
+{% if job_card['status'] != 'Finalized' %}
+<div class="card shadow-sm border-success">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-1">Ready to Finalize?</h5>
+            </div>
+            <div>
+                <form method="POST" class="d-inline">
+                    <input type="hidden" name="action" value="finalize">
+                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Are you sure you want to finalize this merged RFQ? You cannot edit it after finalization.');">
+                        <i class="bi bi-send-check"></i> Finalize and Send to Admin
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-primary" role="alert">
+    <i class="bi bi-check-circle"></i> <strong>This RFQ has been finalized.</strong> It is now ready for quotation generation by the admin.
+</div>
+{% endif %}
+
+<script>
+// Function to submit edit form by item ID
+function submitEditForm(itemId) {
+    const form = document.querySelector('.edit-form-' + itemId);
+    if (form) {
+        form.submit();
+    }
+}
+
+// Auto-calculate totals when editing
+document.querySelectorAll('input[name="quantity"], input[name="unit_price"]').forEach(input => {
+    input.addEventListener('input', function() {
+        const form = this.closest('form');
+        if (form) {
+            const qtyInput = form.querySelector('input[name="quantity"]');
+            const priceInput = form.querySelector('input[name="unit_price"]');
+            
+            // Show visual feedback that changes need to be saved
+            this.style.borderColor = '#ffc107';
+        }
+    });
+});
+</script>
+{% endblock %}

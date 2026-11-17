@@ -1,0 +1,220 @@
+{% extends "layout.html" %}
+{% block title %}New RFQ - FixMe.Pro{% endblock %}
+{% block content %}
+<!-- Page header -->
+<div class="page-header mb-4">
+    <h1>RFQ Creation</h1>
+    <p class="text-muted">Create a mechanic RFQ with AI-powered recommendations</p>
+</div>
+
+<div class="row">
+    <!-- Main form column (left side) -->
+    <div class="col-lg-8">
+        <!-- Customer & Vehicle Information Card -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4">Customer & Vehicle Information</h5>
+                
+                <!-- RFQ form -->
+                <form method="POST" action="{{ url_for('new_quotation') }}" id="quotationForm">
+                    <div class="row">
+                        <!-- Customer Name field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="customer_name" class="form-label">
+                                Customer Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="customer_name" 
+                                   name="customer_name" 
+                                   placeholder="John Doe"
+                                   required>
+                        </div>
+
+                        <!-- Customer Email field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="customer_email" class="form-label">
+                                Customer Email <span class="text-danger">*</span>
+                            </label>
+                            <input type="email"
+                                   class="form-control"
+                                   id="customer_email"
+                                   name="customer_email"
+                                   placeholder="john@example.com"
+                                   required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Customer Phone field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="phone_number" class="form-label">
+                                Customer Phone <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="phone_number"
+                                   name="phone_number"
+                                   placeholder="91234567"
+                                pattern="[0-9+\-\s]{8,15}"
+                                   required>
+                        </div>
+                        
+                        <!-- Vehicle Make field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="vehicle_make" class="form-label">
+                                Vehicle Make <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="vehicle_make" 
+                                   name="vehicle_make" 
+                                   placeholder="Toyota"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Vehicle Model field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="vehicle_model" class="form-label">
+                                Vehicle Model <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="vehicle_model" 
+                                   name="vehicle_model" 
+                                   placeholder="Camry"
+                                   required>
+                        </div>
+                        
+                        <!-- Vehicle Year field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="vehicle_year" class="form-label">
+                                Vehicle Year <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="vehicle_year" 
+                                   name="vehicle_year" 
+                                   placeholder="2018"
+                                   min="1900"
+                                   max="2030"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <!-- Reported Issues section -->
+                    <div class="mb-4">
+                        <label for="reported_issues" class="form-label">
+                            Reported Issues <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control" 
+                                  id="reported_issues" 
+                                  name="reported_issues" 
+                                  rows="4" 
+                                  placeholder="e.g., Engine making strange noise"
+                                  required></textarea>
+                        <small class="text-muted">
+                            Describe the issues reported by the customer
+                        </small>
+                    </div>
+                    
+                    <!-- AI Recommendation button -->
+                    <div class="mb-4">
+                        <button type="button" class="btn btn-gradient w-100" id="aiButton">
+                            ✨ Get AI Recommendations
+                        </button>
+                        <small class="text-muted d-block mt-2">
+                            AI will analyze historical data to suggest parts and fixes
+                        </small>
+                    </div>
+                    
+                    <!-- Submit button -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            Go to Parts & Labour
+                        </button>
+                        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary sidebar (right side) -->
+    <div class="col-lg-4">
+        <!-- RFQ Summary Card -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-4">RFQ Summary</h5>
+                
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Status:</span>
+                    <span class="fw-bold">Draft</span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Pricing:</span>
+                    <span class="fw-bold">Hidden (Mechanic Side)</span>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between">
+                    <span class="fw-bold">Next Step:</span>
+                    <span class="fw-bold text-primary">Add Parts & Labour Hours</span>
+                </div>
+                
+                <!-- Info message -->
+                <div class="alert alert-info mt-4 mb-0">
+                    <small>
+                        💡 Complete the form and continue to add parts and labour hours
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+    .btn-gradient:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const aiButton = document.getElementById('aiButton');
+        if (aiButton) {
+            aiButton.addEventListener('click', function() {
+                const issues = document.getElementById('reported_issues').value.trim();
+                if (!issues) {
+                    alert('Please enter the reported issues first');
+                    return;
+                }
+                this.innerHTML = '⏳ Analyzing...';
+                this.disabled = true;
+                setTimeout(() => {
+                    this.innerHTML = '✨ Get AI Recommendations';
+                    this.disabled = false;
+                    alert('AI analysis complete! This feature will suggest parts based on historical data in the next version.');
+                }, 1500);
+            });
+        }
+    });
+</script>
+{% endblock %}

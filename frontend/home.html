@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Home</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white"><h5 class="mb-0"><i class="fas fa-home me-2"></i>Welcome</h5></div>
+            <div class="card-body">
+                <h4>Hello, {{ username }}!</h4>
+                <p class="mb-3">Role: <span class="badge {% if role == 'admin' %}bg-danger{% else %}bg-primary{% endif %}">{{ role|upper }}</span></p>
+                <hr>
+                <div class="row">
+                    <div class="col-6"><div class="card bg-light"><div class="card-body text-center"><h2>{{ total_users }}</h2><p class="mb-0">Total Users</p></div></div></div>
+                    <div class="col-6"><div class="card bg-light"><div class="card-body text-center"><h2>{{ total_staff }}</h2><p class="mb-0">Staff Accounts</p></div></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white"><h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5></div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if session.role == 'admin' %}
+                    <a href="{{ url_for('add_user', return_to='home') }}" class="btn btn-success"><i class="fas fa-user-plus me-2"></i>Add New Account</a>
+                    <a href="{{ url_for('users') }}" class="btn btn-primary"><i class="fas fa-users me-2"></i>Manage Users</a>
+                    {% endif %}
+                    {% if session.role == 'admin' or session.role == 'test_staff' %}
+                    <a href="{{ url_for('switch_role') }}" class="btn btn-info"><i class="fas fa-user-tie me-2"></i>Switch Role</a>
+                    {% endif %}
+                    <a href="{{ url_for('profile') }}" class="btn btn-warning"><i class="fas fa-key me-2"></i>Change Password</a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if session.role == 'admin' %}
+<div class="card mt-4">
+    <div class="card-header"><h5 class="mb-0"><i class="fas fa-list me-2"></i>Recent Users</h5></div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr><th>Username</th><th>Email</th><th>Role</th><th>Phone</th></tr>
+                </thead>
+                <tbody>
+                    {% for user in recent_users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td><span class="badge {% if user.role == 'admin' %}bg-danger{% else %}bg-primary{% endif %}">{{ user.role }}</span></td>
+                        <td>{{ user.phone or 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="text-center mt-3">
+            <a href="{{ url_for('users') }}" class="btn btn-outline-primary"><i class="fas fa-users me-2"></i>View All Users</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+

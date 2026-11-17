@@ -1,0 +1,138 @@
+{% extends "layout.html" %}
+
+{% block title %}Spare Parts RFQ (View Only) - {{ job_card['job_card_number'] }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb Navigation -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('rfq_merging') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('mechanic_rfq', job_card_id=job_card['id']) }}">Step 1: Mechanic RFQ</a></li>
+        <li class="breadcrumb-item active" aria-current="page"><strong>Step 2: Spare Parts RFQ</strong></li>
+        <li class="breadcrumb-item text-muted">Step 3: Merge RFQs</li>
+    </ol>
+</nav>
+
+<div class="mb-3">
+    <a href="{{ url_for('rfq_merging') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<!-- Alert: View Only -->
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-info-circle"></i> <strong>View Only:</strong> This RFQ was created by the Spare Parts Department. You can view it for comparison before merging.
+</div>
+
+<!-- Job Card Info Header -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <h4 class="mb-0">
+            <i class="bi bi-box-seam"></i> Spare Parts Department RFQ - Job Card: {{ job_card['job_card_number'] }}
+        </h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <strong>Customer:</strong> {{ job_card['customer_name'] }}
+            </div>
+            <div class="col-md-4">
+                <strong>Vehicle:</strong> {{ job_card['vehicle_model'] }}
+            </div>
+            <div class="col-md-4">
+                <strong>Date:</strong> {{ job_card['date_created'] }}
+            </div>
+        </div>
+        {% if job_card['issue_description'] %}
+        <div class="row mt-2">
+            <div class="col-12">
+                <strong>Issue:</strong> {{ job_card['issue_description'] }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Spare Parts Section -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-box-seam"></i> Spare Parts</h5>
+    </div>
+    <div class="card-body">
+        {% if spare_parts %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Part Name</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total Price</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in spare_parts %}
+                    <tr class="{% if part['is_nonstockable'] %}table-warning{% endif %}">
+                        <td><strong>{{ part['part_name'] }}</strong></td>
+                        <td>{{ part['quantity'] }}</td>
+                        <td>${{ "%.2f"|format(part['unit_price']) }}</td>
+                        <td class="text-success"><strong>${{ "%.2f"|format(part['total_price']) }}</strong></td>
+                        <td>
+                            {% if part['is_nonstockable'] %}
+                                <span class="badge bg-warning text-dark">Non-Stockable</span>
+                            {% else %}
+                                <span class="badge bg-success">Stockable</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-secondary">
+                    <tr>
+                        <td colspan="3" class="text-end"><strong>Spare Parts Total:</strong></td>
+                        <td colspan="2" class="text-success">
+                            <strong>${{ "%.2f"|format(spare_parts|sum(attribute='total_price')) }}</strong>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Parts Breakdown -->
+        <div class="row mt-3">
+            <div class="col-6">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h6 class="text-success"><i class="bi bi-check-circle"></i> Stockable</h6>
+                        <h3>{{ spare_parts|selectattr('is_nonstockable', 'equalto', 0)|list|length }}</h3>
+                        <small class="text-muted">In stock items</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h6 class="text-warning"><i class="bi bi-exclamation-triangle"></i> Non-Stockable</h6>
+                        <h3>{{ spare_parts|selectattr('is_nonstockable', 'equalto', 1)|list|length }}</h3>
+                        <small class="text-muted">Special order items</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-muted"><em>No spare parts added by Spare Parts Department</em></p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex justify-content-between mt-4">
+    <a href="{{ url_for('mechanic_rfq', job_card_id=job_card['id']) }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Mechanic RFQ
+    </a>
+    <a href="{{ url_for('merge_rfq', job_card_id=job_card['id']) }}" class="btn btn-success btn-lg">
+        <i class="bi bi-arrows-collapse"></i> Next: Merge RFQs
+    </a>
+</div>
+{% endblock %}

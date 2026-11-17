@@ -1,0 +1,160 @@
+{% extends "layout.html" %}
+{% block title %}Ban Hock Hin - RFQ Creation{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="mb-4">
+        <a href="{{ url_for('rfq_mgmt') }}">
+            <button type="button" class="btn btn-primary">← Back</button>
+        </a>
+    </div>
+
+    <div class="text-center mb-4">
+        <h2>Create RFQ</h2>
+    </div>
+
+    <form method="POST" action="" id="rfqForm">
+        <!-- Customer Information Section -->
+        <div class="form-section">
+            <h4>Customer Information</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="customerName" class="form-label">Customer Name</label>
+                        <input type="text" class="form-control" id="customerName" name="customer_name" placeholder="Enter customer name" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="customerEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="customerEmail" name="customer_email" placeholder="Enter email address" required>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group mb-3">
+                <label for="phoneNumber" class="form-label">Phone Number</label>
+                <input type="text" class="form-control" id="phoneNumber" name="phone_number" placeholder="Enter phone number" required>
+            </div>
+        </div>
+
+        <!-- Motorcycle Information Section -->
+        <div class="form-section">
+            <h4>Motorcycle Information</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="motorcycleBrand" class="form-label">Motorcycle Brand</label>
+                        <input type="text" class="form-control" id="motorcycleBrand" name="motorcycle_brand" placeholder="e.g., Yamaha" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="motorcycleModel" class="form-label">Motorcycle Model</label>
+                        <input type="text" class="form-control" id="motorcycleModel" name="motorcycle_model" placeholder="e.g., YZF-R3" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Items & Services Section -->
+        <div class="form-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Items & Services</h4>
+                <button type="button" class="btn btn-success btn-sm" onclick="addPartRow()">+ Add Item/Service</button>
+            </div>
+            
+            <div class="table-container">
+                <table class="table table-bordered table-hover" id="partsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Item/Service Description</th>
+                            <th>Manufacturer/Supplier</th>
+                            <th>Part/Service Number</th>
+                            <th>Action</th>
+                            <th>Quantity</th>
+                            <th>Price (SGD)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="partsBody">
+                        <!-- Parts rows will be added here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-3 text-end">
+                <h5>Total: SGD <span id="totalPrice">0.00</span></h5>
+            </div>
+        </div>
+
+        <!-- Submit Section -->
+        <div class="form-section">
+            <button type="submit" class="btn btn-primary btn-lg">Submit RFQ</button>
+        </div>
+    </form>
+</div>
+
+<script>
+let partCount = 0;
+
+function addPartRow() {
+    const tbody = document.getElementById('partsBody');
+    const rowIndex = partCount++;
+    
+    const row = document.createElement('tr');
+    row.id = `part-row-${rowIndex}`;
+    row.innerHTML = `
+        <td><input type="text" class="form-control form-control-sm" name="part_description_${rowIndex}" placeholder="e.g., Spark Plug, Labour, Spray Painting, Towing" required></td>
+        <td><input type="text" class="form-control form-control-sm" name="manufacturer_name_${rowIndex}" placeholder="e.g., Yamaha, Workshop, N/A"></td>
+        <td><input type="text" class="form-control form-control-sm" name="part_number_${rowIndex}" placeholder="e.g., SP123, LAB001, N/A"></td>
+        <td>
+            <select class="form-control form-control-sm" name="action_${rowIndex}" required>
+                <option value="">Select Action</option>
+                <option value="Replace">Replace</option>
+                <option value="Repair">Repair</option>
+                <option value="Inspect">Inspect</option>
+                <option value="Adjust">Adjust</option>
+                <option value="Service">Service</option>
+                <option value="Labour">Labour</option>
+            </select>
+        </td>
+        <td><input type="number" class="form-control form-control-sm quantity-input" name="quantity_${rowIndex}" placeholder="Qty" min="1" value="1" required onchange="calculateTotal()"></td>
+        <td><input type="number" class="form-control form-control-sm price-input" name="price_${rowIndex}" placeholder="0.00" step="0.01" min="0" value="0" required onchange="calculateTotal()"></td>
+        <td><button type="button" class="btn btn-danger btn-sm" onclick="removePartRow('part-row-${rowIndex}')">Remove</button></td>
+    `;
+    
+    tbody.appendChild(row);
+}
+
+function removePartRow(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) {
+        row.remove();
+        calculateTotal();
+    }
+}
+
+function calculateTotal() {
+    let total = 0;
+    const rows = document.querySelectorAll('#partsBody tr');
+    
+    rows.forEach(row => {
+        const quantityInput = row.querySelector('.quantity-input');
+        const priceInput = row.querySelector('.price-input');
+        
+        if (quantityInput && priceInput) {
+            const quantity = parseFloat(quantityInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            total += quantity * price;
+        }
+    });
+    
+    document.getElementById('totalPrice').textContent = total.toFixed(2);
+}
+
+// Add first part row on load
+document.addEventListener('DOMContentLoaded', function() {
+    addPartRow();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,240 @@
+{% extends "layout.html" %}
+
+{% block title %}Merge RFQs - {{ job_card['job_card_number'] }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb Navigation -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('rfq_merging') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('mechanic_rfq', job_card_id=job_card['id']) }}">Step 1: Mechanic RFQ</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('spare_parts_rfq', job_card_id=job_card['id']) }}">Step 2: Spare Parts RFQ</a></li>
+        <li class="breadcrumb-item active" aria-current="page"><strong>Step 3: Merge RFQs</strong></li>
+    </ol>
+</nav>
+
+<div class="mb-3">
+    <a href="{{ url_for('rfq_merging') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<!-- Job Card Info Header -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <h4 class="mb-0">
+            <i class="bi bi-arrows-collapse"></i> RFQ Comparison & Merge - Job Card: {{ job_card['job_card_number'] }}
+        </h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <strong>Customer:</strong> {{ job_card['customer_name'] }}
+            </div>
+            <div class="col-md-4">
+                <strong>Vehicle:</strong> {{ job_card['vehicle_model'] }}
+            </div>
+            <div class="col-md-4">
+                <strong>Date:</strong> {{ job_card['date_created'] }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RFQ Comparison -->
+<div class="row mb-4">
+    <!-- Mechanic Department RFQ -->
+    <div class="col-lg-6 mb-3">
+        <div class="card shadow-sm h-100 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-wrench"></i> Mechanic Department RFQ</h5>
+            </div>
+            <div class="card-body">
+                <!-- Labour Services -->
+                <h6 class="text-primary mb-3"><i class="bi bi-tools"></i> Labour Services</h6>
+                {% if labor_services %}
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Service</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for service in labor_services %}
+                            <tr>
+                                <td>{{ service['service_name'] }}</td>
+                                <td>{{ service['quantity'] }}</td>
+                                <td>${{ "%.2f"|format(service['price']) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted"><em>No labour services added</em></p>
+                {% endif %}
+
+                <!-- Non-Stockable Parts from Mechanic -->
+                <h6 class="text-warning mb-3"><i class="bi bi-exclamation-triangle"></i> Non-Stockable Parts</h6>
+                {% if mech_nonstockable %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-warning">
+                        <thead>
+                            <tr>
+                                <th>Part</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for part in mech_nonstockable %}
+                            <tr>
+                                <td>{{ part['part_name'] }}</td>
+                                <td>{{ part['quantity'] }}</td>
+                                <td>${{ "%.2f"|format(part['price']) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted"><em>No non-stockable parts added</em></p>
+                {% endif %}
+
+                <!-- Mechanic RFQ Total -->
+                <div class="mt-3 p-2 bg-light rounded">
+                    <strong>Mechanic Department Total:</strong>
+                    <span class="float-end">
+                        ${{ "%.2f"|format(mechanic_total) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spare Parts Department RFQ -->
+    <div class="col-lg-6 mb-3">
+        <div class="card shadow-sm h-100 border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-box-seam"></i> Spare Parts Department RFQ</h5>
+            </div>
+            <div class="card-body">
+                {% if spare_parts %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Part Name</th>
+                                <th>Qty</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for part in spare_parts %}
+                            <tr class="{% if part['is_nonstockable'] %}table-warning{% endif %}">
+                                <td>
+                                    {{ part['part_name'] }}
+                                    {% if part['is_nonstockable'] %}
+                                    <span class="badge bg-warning text-dark">NS</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ part['quantity'] }}</td>
+                                <td>${{ "%.2f"|format(part['unit_price']) }}</td>
+                                <td>${{ "%.2f"|format(part['total_price']) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Spare Parts Breakdown -->
+                <div class="row mt-3">
+                    <div class="col-6">
+                        <div class="p-2 bg-success text-white rounded text-center">
+                            <small>Stockable</small>
+                            <div><strong>{{ spare_parts|selectattr('is_nonstockable', 'equalto', 0)|list|length }}</strong></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 bg-warning text-dark rounded text-center">
+                            <small>Non-Stockable</small>
+                            <div><strong>{{ spare_parts|selectattr('is_nonstockable', 'equalto', 1)|list|length }}</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spare Parts Total -->
+                <div class="mt-3 p-2 bg-light rounded">
+                    <strong>Spare Parts Department Total:</strong>
+                    <span class="float-end">${{ "%.2f"|format(spare_parts_total) }}</span>
+                </div>
+                {% else %}
+                <p class="text-muted"><em>No spare parts added</em></p>
+                <div class="mt-3 p-2 bg-light rounded">
+                    <strong>Spare Parts Department Total:</strong>
+                    <span class="float-end">$0.00</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Combined Total Summary -->
+<div class="card shadow-sm mb-4 border-success">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="mb-0">
+                    <i class="bi bi-calculator"></i> Combined Total from Both Departments
+                </h5>
+            </div>
+            <div class="col-md-4 text-end">
+                <h3 class="text-success mb-0">
+                    ${{ "%.2f"|format(combined_total) }}
+                </h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Merge Action -->
+<div class="card shadow-sm mb-4 border-warning">
+    <div class="card-header bg-warning">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Ready to Merge?</h5>
+    </div>
+    <div class="card-body">
+        
+        {% if not labor_services and not mech_nonstockable and not spare_parts %}
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> 
+            <strong>Cannot merge:</strong> Both RFQs are empty. Please add items to at least one RFQ before merging.
+        </div>
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('mechanic_rfq', job_card_id=job_card['id']) }}" class="btn btn-primary">
+                <i class="bi bi-wrench"></i> Add Mechanic Items
+            </a>
+            <a href="{{ url_for('spare_parts_rfq', job_card_id=job_card['id']) }}" class="btn btn-info">
+                <i class="bi bi-box-seam"></i> Add Spare Parts
+            </a>
+        </div>
+        {% else %}
+        <form method="POST">
+            <input type="hidden" name="action" value="perform_merge">
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('spare_parts_rfq', job_card_id=job_card['id']) }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back: Spare Parts RFQ
+                </a>
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="bi bi-arrows-collapse"></i> Merge RFQs
+                </button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

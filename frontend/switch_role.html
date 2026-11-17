@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% block title %}Switch Role{% endblock %}
+
+{% block content %}
+<!-- Center role switch card -->
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card">
+            <!-- Card header with warning color -->
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">Switch Admin Role</h4>
+            </div>
+            <div class="card-body">
+                <!-- Current role display -->
+                <div class="mb-4 p-3 bg-light rounded">
+                    <p class="mb-0"><strong>Current Role:</strong> <span class="badge bg-primary">{{ current_role }}</span></p>
+                </div>
+                
+                <!-- Role switch form -->
+                <form method="POST" action="{{ url_for('switch_role') }}">
+                    <!-- Role selection -->
+                    <div class="mb-3">
+                        <label for="newRole" class="form-label">New Role</label>
+                        <select class="form-select" id="newRole" name="new_role" required>
+                            <option value="">Select a role</option>
+                            <option value="admin" {% if current_role == 'admin' %}disabled{% endif %}>Admin - Full System Access</option>
+                            <option value="test_staff" {% if current_role == 'test_staff' %}disabled{% endif %}>Test Staff - Limited Access</option>
+                        </select>
+                        <div class="form-text">
+                            {% if current_role == 'admin' %}
+                            Switch to test staff role for limited access and testing
+                            {% else %}
+                            Switch to admin role and gain back admin privileges
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Action buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('home') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-warning">Change Role</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends "layout.html" %}
+{% block title %}Ban Hock Hin - Quotation Management{% endblock %}
+
+{% block content %}
+<!-- back button -->
+<div class="container-fluid mt-4">
+    <div class="mb-4">
+        <a href="{{ url_for('home') }}">
+            <button type="button" class="btn btn-primary">← Back</button>
+        </a>
+    </div>
+
+    <!-- page title -->
+    <div class="text-center mb-4">
+        <h2>Quotation Management</h2>
+    </div>
+
+    <!-- Bootstrap Alerts -->
+    {% if session.get('quotation_created') %}
+        <div class="alert alert-success alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            {{ session.pop('quotation_created') }} created successfully.
+        </div>
+    {% endif %}
+
+    {% if session.get('quotation_deleted') %}
+        <div class="alert alert-success alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            {{ session.pop('quotation_deleted') }} deleted successfully.
+        </div>
+    {% endif %}
+
+    {% if session.get('quotation_error') %}
+        <div class="alert alert-danger alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            {{ session.pop('quotation_error') }}
+        </div>
+    {% endif %}
+
+    <!-- search, date, filter -->
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="search-container">
+            <span>Search</span>
+            <input type="text" id="searchInput" class="form-control" placeholder="Search..." style="max-width: 350px;" title="Search by: Quotation Number, Name, Email, or Phone" aria-label="Search by Quotation Number, Name, Email, or Phone">
+            <span>Date</span>
+            <input type="text" id="dateFilter" class="form-control" placeholder="dd/mm/yyyy" style="max-width: 150px;" pattern="\d{2}/\d{2}/\d{4}" maxlength="10">
+            <span>Status</span>
+            <select id="statusFilter" class="form-control" style="max-width: 150px;">
+                <option value="">All</option>
+                <option value="Sent">Sent</option>
+                <option value="Unsent">Unsent</option>
+            </select>
+        </div>
+        <!-- create button -->
+        <a href="{{ url_for('quote_create') }}">
+            <button type="button" class="btn btn-primary">+ Create</button>
+        </a>
+    </div>
+
+    <!-- quotations table -->
+    <div class="table-container">
+        <table class="table table-bordered table-hover" id="quotationsTable">
+            <thead class="table-light">
+                <tr>
+                    <th>Quotation Number</th>
+                    <th>Customer Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th style="cursor: pointer;" onclick="sortTable(5)">
+                        Date Created <span id="arrow-col-5"></span>
+                    </th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if quotations %}
+                    {% for quotation in quotations %}
+                    <tr class="quotation-row">
+                        <td>{{ quotation.quotation_number }}</td>
+                        <td>{{ quotation.customer_name }}</td>
+                        <td>{{ quotation.customer_email }}</td>
+                        <td>{{ quotation.phone_number }}</td>
+                        <td>
+                            <!-- Status is now a clickable button -->
+                            <form method="POST" action="{{ url_for('toggle_status', quotation_id=quotation.id) }}" style="display: inline-block; margin: 0;">
+                                <button type="submit" class="btn btn-sm {% if quotation.status == 'Sent' %}btn-success{% else %}btn-danger{% endif %}" style="min-width: 70px;">
+                                    {{ quotation.status }}
+                                </button>
+                            </form>
+                        </td>
+                        <td>{{ quotation.created_date }}</td>
+                        <td>
+                            <a href="{{ url_for('quote_edit', quotation_id=quotation.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                            <a href="{{ url_for('quote_send', quotation_id=quotation.id) }}" class="btn btn-sm btn-warning">Send</a>
+                            {% if session.role == 'admin' %}
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal_{{ quotation.id }}">Delete</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr class="no-data-row">
+                        <td colspan="7" class="text-center">No quotations found</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <div id="filterNoMatchMsg" class="text-center text-muted mt-2" style="display: none;">No quotations match the current filter.</div>
+</div>
+
+<!-- delete confirmation -->
+{% if quotations and session.role == 'admin' %}
+    {% for quotation in quotations %}
+    <div class="modal fade" id="deleteModal_{{ quotation.id }}" tabindex="-1" aria-labelledby="deleteModalLabel_{{ quotation.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel_{{ quotation.id }}">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete quotation <strong>{{ quotation.quotation_number }}</strong>? This action cannot be undone.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="POST" action="{{ url_for('quotedelete', quotation_id=quotation.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<script>
+const getCellText = (cell) => (cell.textContent || cell.innerText).toLowerCase();
+
+function filterTable() {
+    const rawSearch = document.getElementById('searchInput').value.trim();
+    const dateValue = document.getElementById('dateFilter').value.trim();
+    const statusValue = document.getElementById('statusFilter').value.trim().toLowerCase();
+    const searchDigits = rawSearch.replace(/\D/g, '');
+    const noMatchMsg = document.getElementById('filterNoMatchMsg');
+    const dataRows = Array.from(document.querySelectorAll('#quotationsTable tbody tr.quotation-row'));
+
+    if (!dataRows.length) {
+        if (noMatchMsg) noMatchMsg.style.display = 'none';
+        return;
+    }
+
+    let visibleCount = 0;
+    
+    dataRows.forEach(row => {
+        const cells = row.getElementsByTagName('td');
+        if (!cells.length) return;
+        
+        const [quotNum, custName, custEmail, phone, status, date] = Array.from(cells).slice(0, 6).map(getCellText);
+        const phoneDigits = cells[3].textContent.replace(/\D/g, '');
+        const statusText = cells[4].textContent.trim().toLowerCase();
+        
+        const searchMatch = !rawSearch || quotNum.includes(rawSearch.toLowerCase()) || 
+                           custName.includes(rawSearch.toLowerCase()) || 
+                           custEmail.includes(rawSearch.toLowerCase()) || 
+                           phone.includes(rawSearch.toLowerCase()) || 
+                           (searchDigits && phoneDigits.includes(searchDigits));
+        
+        const dateMatch = !dateValue || cells[5].textContent.trim().startsWith(dateValue);
+        const statusMatch = !statusValue || statusText === statusValue;
+        
+        const isVisible = searchMatch && dateMatch && statusMatch;
+        row.style.display = isVisible ? '' : 'none';
+        if (isVisible) visibleCount += 1;
+    });
+
+    if (noMatchMsg) noMatchMsg.style.display = visibleCount === 0 ? '' : 'none';
+}
+
+document.getElementById('searchInput').addEventListener('keyup', filterTable);
+document.getElementById('dateFilter').addEventListener('keyup', filterTable);
+document.getElementById('statusFilter').addEventListener('change', filterTable);
+
+(function() {
+    const df = document.getElementById('dateFilter');
+    if (!df) return;
+    let deleting = false;
+    df.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' || e.key === 'Delete') deleting = true;
+    });
+    const formatDate = (val, isDelete) => {
+        const digits = val.replace(/\D/g, '').slice(0, 8);
+        if (digits.length <= 2) return digits.length === 2 ? digits + '/' : digits;
+        if (digits.length <= 4) {
+            const day = digits.substring(0, 2);
+            const monthRaw = digits.substring(2);
+            let monthPart = monthRaw;
+            if (monthRaw.length === 2) {
+                const m = parseInt(monthRaw, 10);
+                if (!isNaN(m) && m > 12) monthPart = '12';
+            }
+            const part = day + '/' + monthPart;
+            return digits.length === 4 ? part + '/' : part;
+        }
+        const day = digits.substring(0, 2);
+        let month = digits.substring(2, 4);
+        const m = parseInt(month, 10);
+        if (!isNaN(m) && m > 12) month = '12';
+        const year = digits.substring(4);
+        return day + '/' + month + '/' + year;
+    };
+    df.addEventListener('input', (e) => {
+        const isDelete = deleting || (e.inputType && e.inputType.startsWith('delete'));
+        if (isDelete) { deleting = false; return; }
+        e.target.value = formatDate(e.target.value, false);
+        deleting = false;
+    });
+})();
+
+let sortColumn = 5; 
+let sortDirection = 'desc';
+
+function updateSortArrows() {
+    const arrows = { 5: document.getElementById('arrow-col-5') };
+    Object.entries(arrows).forEach(([index, el]) => {
+        if (!el) return;
+        el.textContent = parseInt(index, 10) === sortColumn ? (sortDirection === 'asc' ? '▲' : '▼') : '';
+    });
+}
+
+function sortTable(columnIndex, isInitial = false) {
+    const table = document.getElementById('quotationsTable');
+    const tbody = table.getElementsByTagName('tbody')[0];
+    const rows = Array.from(tbody.querySelectorAll('tr.quotation-row')).filter(row => row.style.display !== 'none');
+
+    if (!rows.length) {
+        updateSortArrows();
+        return;
+    }
+    
+    if (!isInitial) {
+        if (sortColumn === columnIndex) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        else { sortColumn = columnIndex; sortDirection = 'asc'; }
+    } else sortColumn = columnIndex;
+    
+    rows.sort((rowA, rowB) => {
+        const cellA = rowA.getElementsByTagName('td')[columnIndex].textContent.trim();
+        const cellB = rowB.getElementsByTagName('td')[columnIndex].textContent.trim();
+        if (!isNaN(cellA) && !isNaN(cellB)) return sortDirection === 'asc' ? parseInt(cellA) - parseInt(cellB) : parseInt(cellB) - parseInt(cellA);
+        return sortDirection === 'asc' ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    updateSortArrows();
+}
+
+sortTable(5, true);
+updateSortArrows();
+filterTable();
+</script>
+{% endblock %}

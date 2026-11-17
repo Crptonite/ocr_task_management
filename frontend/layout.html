@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Workshop RFQ & Quotation System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        html { overflow-y: scroll; }
+        body { background-color: #f8f9fa; padding-top: 56px; }
+        .content-wrapper { padding-bottom: 80px; }
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1030;
+            background: #34414d;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+        }
+        .navbar .nav-link,
+        .navbar .navbar-brand {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+        .navbar .nav-link:hover,
+        .navbar .navbar-brand:hover {
+            color: #fff !important;
+        }
+        .navbar .nav-link.active,
+        .navbar .nav-link.active:hover {
+            color: #fff !important;
+            background-color: rgba(255, 255, 255, 0.12);
+            border-radius: 0.4rem;
+            font-weight: 600;
+        }
+        .dropdown-menu .dropdown-item.active,
+        .dropdown-menu .dropdown-item.active:hover {
+            background-color: #4a5561;
+            color: #fff;
+        }
+        .footer {
+            background: #34414d;
+            color: #fff;
+            text-align: center;
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+            z-index: 1000;
+        }
+        .form-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-section h4 { margin-bottom: 15px; color: #333; }
+        .table-container { background: white; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .search-container { display: flex; align-items: center; gap: 10px; }
+        .section-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 100%; }
+        .section-header { margin-bottom: 15px; }
+        .section-content { padding: 10px 0; }
+    </style>
+</head>
+<body>
+    {% set current_endpoint = request.endpoint or '' %}
+    {% set home_endpoints = ['home', 'index'] %}
+    {% set rfq_endpoints = ['new_quotation', 'rfq_parts_builder', 'quotations', 'edit_quotation', 'update_labor', 'delete_part', 'delete_quotation', 'job_history', 'rfqmanagement', 'rfq_mgmt', 'rfqcreate', 'rfq_create', 'rfqdelete'] %}
+    {% set merge_endpoints = ['rfq_merging', 'mechanic_rfq', 'spare_parts_rfq', 'merge_rfq', 'view_merged_rfq'] %}
+    {% set quote_endpoints = ['quote_mgmt', 'quote_create', 'quote_edit', 'quotedelete', 'toggle_status', 'quote_send', 'send_whatsapp', 'send_email', 'api_create_quotation', 'api_rfqs'] %}
+    {% set home_active = current_endpoint in home_endpoints %}
+    {% set rfq_active = current_endpoint in rfq_endpoints %}
+    {% set merge_active = current_endpoint in merge_endpoints %}
+    {% set quote_active = current_endpoint in quote_endpoints %}
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('home') }}">
+                <i class="fas fa-car me-2"></i>Ban Hock Hin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            {% set hide_nav = request.endpoint in ['login', 'signup'] %}
+            <div class="collapse navbar-collapse" id="navbarNav">
+                {% if not hide_nav %}
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if home_active %}active{% endif %}" href="{{ url_for('home') }}">Home</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if rfq_active %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">RFQ Management</a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item {% if current_endpoint == 'new_quotation' %}active{% endif %}" href="{{ url_for('new_quotation') }}">RFQ Creation</a></li>
+                            <li><a class="dropdown-item {% if current_endpoint in ['quotations', 'edit_quotation'] %}active{% endif %}" href="{{ url_for('quotations') }}">View RFQ</a></li>
+                            <li><a class="dropdown-item {% if current_endpoint == 'job_history' %}active{% endif %}" href="{{ url_for('job_history') }}">RFQ History</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if merge_active %}active{% endif %}" href="{{ url_for('rfq_merging') }}">RFQ Merging</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if quote_active %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Quotation Management</a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item {% if current_endpoint in ['quote_mgmt', 'quote_edit', 'quote_send'] %}active{% endif %}" href="{{ url_for('quote_mgmt') }}">View Quotations</a></li>
+                            <li><a class="dropdown-item {% if current_endpoint == 'quote_create' %}active{% endif %}" href="{{ url_for('quote_create') }}">Create Quotation</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                {% if 'user_id' in session %}
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link me-2" href="{{ url_for('account') }}" title="Account Settings">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user me-1"></i> {{ session.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            <li><span class="dropdown-item-text"><small class="text-muted">Role: {{ session.role }}</small></span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('home') }}"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-key me-2"></i>Change Password</a></li>
+                            {% if session.role == 'admin' or session.role == 'test_staff' %}
+                            <li><a class="dropdown-item" href="{{ url_for('switch_role') }}"><i class="fas fa-user-tie me-2"></i>Switch Role</a></li>
+                            {% endif %}
+                            {% if session.role == 'admin' %}
+                            <li><a class="dropdown-item" href="{{ url_for('users') }}"><i class="fas fa-users me-2"></i>Manage Users</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="content-wrapper">
+        <div class="container main-container mt-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        {% if category == 'success' %}
+                            <div class="alert alert-success alert-dismissible fade show">
+                                <i class="fas fa-check-circle me-2"></i>{{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% elif category == 'danger' %}
+                            <div class="alert alert-danger alert-dismissible fade show">
+                                <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% elif category == 'warning' %}
+                            <div class="alert alert-warning alert-dismissible fade show">
+                                <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info alert-dismissible fade show">
+                                <i class="fas fa-info-circle me-2"></i>{{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Fixed Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="mb-2">Auto Workshop RFQ & Quotation System &copy; 2026</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                var closeBtn = alert.querySelector('.btn-close');
+                if (closeBtn) closeBtn.click();
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+{% extends "layout.html" %}
+{% block title %}Add New Account{% endblock %}
+
+{% block content %}
+<!-- Center admin form to add new users -->
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <!-- Card header with success color (admin feature) -->
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Add New Account</h4>
+            </div>
+            <div class="card-body">
+                <!-- Add user form - POST request, form ID for validation -->
+                <form method="POST" action="{{ url_for('add_user') }}" id="addUserForm">
+                    <!-- Username and Email fields - side by side -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="username" class="form-label">Username *</label>
+                            <!-- Preserve data if form validation fails -->
+                            <input type="text" class="form-control" id="username" name="username" value="{{ username or '' }}" required>
+                            <div class="form-text">3-20 characters</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email *</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ email or '' }}" required>
+                        </div>
+                    </div>
+                    
+                    <!-- Password and Confirm - same as signup.html for consistency -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label">Password *</label>
+                            <input type="password" class="form-control" id="password" name="password" required minlength="8">
+                            <div class="form-text">Minimum 8 characters, Atleast one letter, One number, and One special character</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="confirm_password" class="form-label">Confirm Password *</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="8">
+                            <!-- Real-time password match feedback -->
+                            <div id="passwordMatch" class="form-text"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Phone and Role dropdown - admin can set role -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <!-- Numbers only phone field -->
+                            <input type="tel" class="form-control" id="phone" name="phone" pattern="[0-9]*" inputmode="numeric" placeholder="e.g., 1234567890" value="{{ phone or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="role" class="form-label">Role *</label>
+                            <!-- Admin can assign staff or admin role - preserves selection on error -->
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="staff" {% if role == 'staff' %}selected{% endif %}>Staff</option>
+                                <option value="admin" {% if role == 'admin' %}selected{% endif %}>Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Cancel and Submit buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for(request.args.get('return_to', 'users')) }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-success" id="submitBtn">Create Account</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Real-time password confirmation validation (same as signup.html)
+function checkPassword() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    const matchDiv = document.getElementById('passwordMatch');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (confirmPassword === '') {
+        matchDiv.innerHTML = '';
+        matchDiv.className = 'form-text';
+        submitBtn.disabled = false;
+        return;
+    }
+    
+    if (password === confirmPassword) {
+        matchDiv.innerHTML = '<i class="fas fa-check text-success me-1"></i>Passwords match';
+        matchDiv.className = 'form-text text-success';
+        submitBtn.disabled = false;
+    } else {
+        matchDiv.innerHTML = '<i class="fas fa-times text-danger me-1"></i>Passwords do not match';
+        matchDiv.className = 'form-text text-danger';
+        submitBtn.disabled = true;
+    }
+}
+
+// Trigger password check when either password field changes
+document.getElementById('password').addEventListener('keyup', checkPassword);
+document.getElementById('confirm_password').addEventListener('keyup', checkPassword);
+
+// Phone validation - auto-remove non-numeric characters
+document.getElementById('phone').addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '');
+});
+
+// Form validation on submit - final checks before sending
+document.getElementById('addUserForm').addEventListener('submit', function(e) {
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    
+    if (password !== confirmPassword) {
+        e.preventDefault();
+        alert('Passwords do not match!');
+        return false;
+    }
+    
+    if (password.length < 8) {
+        e.preventDefault();
+        alert('Password must be at least 8 characters');
+        return false;
+    }
+    
+    return true;
+});
+</script>
+{% endblock %}
+

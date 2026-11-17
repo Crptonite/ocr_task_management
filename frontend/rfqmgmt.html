@@ -1,0 +1,201 @@
+{% extends "layout.html" %}
+{% block title %}Ban Hock Hin - RFQ Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="mb-4">
+        <a href="{{ url_for('home') }}">
+            <button type="button" class="btn btn-primary">← Back</button>
+        </a>
+    </div>
+
+    <div class="text-center mb-4">
+        <h2>RFQ Management</h2>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="search-container">
+            <span>Search</span>
+            <input type="text" id="searchInput" class="form-control" placeholder="Search by RFQ ID" style="max-width: 300px;">
+            <span>Date</span>
+            <input type="text" id="dateFilter" class="form-control" placeholder="dd/mm/yyyy" style="max-width: 150px;" pattern="\d{2}/\d{2}/\d{4}" maxlength="10">
+        </div>
+        <a href="{{ url_for('new_quotation') }}">
+            <button type="button" class="btn btn-primary">+ Create</button>
+        </a>
+    </div>
+
+    <div class="table-container">
+        <table class="table table-bordered table-hover" id="rfqTable">
+            <thead class="table-light">
+                <tr>
+                    <th style="cursor: pointer;" onclick="sortTable(0)">
+                        RFQ ID <span id="arrow-col-0"></span>
+                    </th>
+                    <th>Customer Name</th>
+                    <th>Contact Email</th>
+                    <th>Contact Number</th>
+                    <th>Motorcycle</th>
+                    <th>Date Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if rfqs %}
+                    {% for rfq in rfqs %}
+                    <tr>
+                        <td>{{ rfq.id }}</td>
+                        <td>{{ rfq.customer_name }}</td>
+                        <td>{{ rfq.customer_email }}</td>
+                        <td>{{ rfq.phone_number }}</td>
+                        <td>{{ rfq.motorcycle_brand }} {{ rfq.motorcycle_model }}</td>
+                        <td>{{ rfq.created_date }}</td>
+                        <td>
+                            {% if session.role == 'admin' %}
+                            <form method="POST" action="{{ url_for('rfqdelete', rfq_id=rfq.id) }}" style="display: inline-block; margin: 0;">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete RFQ {{ rfq.id }}?')">Delete</button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">No RFQs found</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function filterTable() {
+    const searchValue = document.getElementById('searchInput').value.toLowerCase();
+    const dateValue = document.getElementById('dateFilter').value;
+    const table = document.getElementById('rfqTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        if (cells.length > 0) {
+            const rfqId = cells[0].textContent || cells[0].innerText;
+            const dateCreated = cells[5].textContent || cells[5].innerText;
+            
+            // Filter by ID
+            const idMatch = rfqId.toLowerCase().indexOf(searchValue) > -1 || searchValue === '';
+            
+            // Filter by date
+            const dateMatch = !dateValue || dateCreated.indexOf(dateValue) > -1;
+            
+            rows[i].style.display = (idMatch && dateMatch) ? '' : 'none';
+        }
+    }
+}
+
+document.getElementById('searchInput').addEventListener('keyup', filterTable);
+document.getElementById('dateFilter').addEventListener('keyup', filterTable);
+
+// Auto-insert slashes into dateFilter as user types (dd/mm/yyyy)
+(function() {
+    const df = document.getElementById('dateFilter');
+    if (!df) return;
+    let deleting = false;
+    df.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+            deleting = true;
+        }
+    });
+    const formatDate = (val, isDelete) => {
+        const digits = val.replace(/\D/g, '').slice(0, 8);
+        if (digits.length <= 2) {
+            return digits.length === 2 ? digits + '/' : digits;
+        }
+        if (digits.length <= 4) {
+            const day = digits.substring(0, 2);
+            const monthRaw = digits.substring(2);
+            let monthPart = monthRaw;
+            if (monthRaw.length === 2) {
+                const m = parseInt(monthRaw, 10);
+                if (!isNaN(m) && m > 12) monthPart = '12';
+            }
+            const part = day + '/' + monthPart;
+            return digits.length === 4 ? part + '/' : part;
+        }
+        const day = digits.substring(0, 2);
+        let month = digits.substring(2, 4);
+        const m = parseInt(month, 10);
+        if (!isNaN(m) && m > 12) month = '12';
+        const year = digits.substring(4);
+        return day + '/' + month + '/' + year;
+    };
+    df.addEventListener('input', (e) => {
+        const isDelete = deleting || (e.inputType && e.inputType.startsWith('delete'));
+        if (isDelete) {
+            deleting = false;
+            return;
+        }
+        const formatted = formatDate(e.target.value, false);
+        e.target.value = formatted;
+        deleting = false;
+    });
+})();
+
+let sortColumn = 0;
+let sortDirection = 'desc';
+
+function updateSortArrows() {
+    const arrows = {
+        0: document.getElementById('arrow-col-0')
+    };
+    Object.entries(arrows).forEach(([index, el]) => {
+        if (!el) return;
+        if (parseInt(index, 10) === sortColumn) {
+            el.textContent = sortDirection === 'asc' ? '▲' : '▼';
+        } else {
+            el.textContent = '';
+        }
+    });
+}
+
+function sortTable(columnIndex, isInitial = false) {
+    const table = document.getElementById('rfqTable');
+    const tbody = table.getElementsByTagName('tbody')[0];
+    const rows = Array.from(tbody.getElementsByTagName('tr')).filter(row => row.style.display !== 'none');
+    
+    if (!isInitial) {
+        if (sortColumn === columnIndex) {
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortColumn = columnIndex;
+            sortDirection = 'asc';
+        }
+    } else {
+        sortColumn = columnIndex;
+    }
+    
+    rows.sort((rowA, rowB) => {
+        const cellA = rowA.getElementsByTagName('td')[columnIndex].textContent.trim();
+        const cellB = rowB.getElementsByTagName('td')[columnIndex].textContent.trim();
+        
+        if (!isNaN(cellA) && !isNaN(cellB)) {
+            return sortDirection === 'asc' ? parseInt(cellA) - parseInt(cellB) : parseInt(cellB) - parseInt(cellA);
+        }
+        
+        if (sortDirection === 'asc') {
+            return cellA.localeCompare(cellB);
+        } else {
+            return cellB.localeCompare(cellA);
+        }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    updateSortArrows();
+}
+
+sortTable(0, true);
+updateSortArrows();
+</script>
+{% endblock %}
