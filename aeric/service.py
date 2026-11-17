@@ -177,6 +177,8 @@ def validate_po(po: dict, catalog: list[dict], existing_orders: list[dict] | Non
     checked = []
     for n, line in enumerate(lines):
         match = match_sku(line["sku"], line["description"], catalog)
+        if match["status"] == "exact" and match.get("suggested_sku"):
+            line["sku"] = match["suggested_sku"]
         problems = []
         if match["status"] != "exact":
             problems.append({"level": "error", "code": f"sku_{match['status']}", "message": match["message"]})

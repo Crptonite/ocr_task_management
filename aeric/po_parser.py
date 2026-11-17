@@ -128,13 +128,12 @@ def _split_row(row: str) -> list[str] | None:
 
 def _row_to_line(cells: list[str]) -> dict | None:
     cells = [c for c in cells if c != ""]
-    if len(cells) < 3 or not SKU_TOKEN.match(cells[0].upper()):
+    if len(cells) < 2 or not SKU_TOKEN.match(cells[0].upper()):
         return None
     numbers = [c for c in cells[1:] if _num(c) is not None]
     words = [c for c in cells[1:] if _num(c) is None]
-    if len(numbers) < 2:
-        return None
-    qty, price = numbers[0], numbers[1]
+    qty = numbers[0] if len(numbers) >= 1 else None
+    price = numbers[1] if len(numbers) >= 2 else None
     amount = numbers[2] if len(numbers) > 2 else None
     return _line(cells[0].upper(), " ".join(words) or None, qty, price, amount)
 

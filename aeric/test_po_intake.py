@@ -177,3 +177,20 @@ def test_destination_label_variants_fill_the_port():
     for label in ("Destination", "Final Destination", "Ship to Port", "Destination Port"):
         po, _ = po_parser.parse_po("po.txt", text=f"PO Number: A1\nBuyer: Z\n{label}: Hanoi\n")
         assert po["port"] == "Hanoi", label
+
+
+def test_incomplete_sku_row_is_preserved_and_exact_sku_is_canonicalized():
+    po, _ = po_parser.parse_po("po.txt", text="PO Number: A1\nBuyer: Z\nPort: LA\nOrder Date: 2026-11-10\nDelivery Date: 2027-01-01\nKD-CH-2047 | Chair | 10\n")
+    assert len(po["lines"]) == 1
+    assert po["lines"][0]["quantity"] == 10
+    assert po["lines"][0]["unit_price"] is None
+
+    store.reset()
+    res = client.post("/api/po-intake/validate", json={
+        "po_number": "A1", "buyer": "Z", "port": "LA",
+        "order_date": "2026-11-10", "delivery_date": "2027-01-01",
+        "lines": [{"sku": "kd\u2013ch\u20132047", "quantity": 1, "unit_price": 145}],
+    })
+    assert res.status_code == 200
+    assert res.json()["po"]["lines"][0]["sku"] == "KD-CH-2047"
+    assert res.json()["status"] == "ready"

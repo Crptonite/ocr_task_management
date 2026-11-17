@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from app import store
@@ -90,7 +91,7 @@ async def intake(file: UploadFile | None = File(default=None), text: str | None 
     if text and len(text) > MAX_TEXT:
         raise HTTPException(status_code=413, detail="Pasted text is too long (100,000 characters max).")
 
-    po, meta = parse_po(filename, content=content, text=None if content is not None else text)
+    po, meta = await run_in_threadpool(parse_po, filename, content=content, text=None if content is not None else text)
     result = _check(po)
     if meta["input"] == "image" and not result["lines"] and not any(result["po"].get(k) for k in ("po_number", "buyer")):
         meta["note"] = meta.get("note") or "Nothing could be read from this image."

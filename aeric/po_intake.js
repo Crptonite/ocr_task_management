@@ -5,6 +5,7 @@ let intakeResult = null;
 let intakeFile = null;
 let intakeSourceLabel = "manual entry";
 let intakeTimer = null;
+let intakeValidateSeq = 0;
 
 // Scoped layout fixes kept in aeric/ (shared styles.css is locked): honour [hidden] on the empty state
 // and stop the wide line-item table from pushing the panel past the viewport.
@@ -21,6 +22,7 @@ let intakeTimer = null;
     [data-theme="dark"] .modal-box, [data-theme="dark"] .intake-panel { color-scheme: dark; }
     [data-theme="dark"] .email-fields textarea, [data-theme="dark"] .email-fields input,
     [data-theme="dark"] .intake-text-label textarea { background: transparent; color: inherit; color-scheme: dark; }
+    @media (max-width: 1120px) { .intake-grid { grid-template-columns: minmax(0, 1fr); } }
   `;
   document.head.appendChild(style);
 
@@ -52,7 +54,7 @@ function collectIntakePayload() {
     const v = el ? el.value.trim() : "";
     po[key] = v ? (key === "currency" ? v.toUpperCase() : v) : null;
   });
-  po.lines = $$("#intake-line-rows tr").map((tr) => {
+  po.lines = $$("#intake-line-rows tr[data-line-idx]").map((tr) => {
     const qRaw = $('[name="quantity"]', tr).value.trim();
     const pRaw = $('[name="unit_price"]', tr).value.trim();
     return {
@@ -180,9 +182,11 @@ function renderIntake(res) {
 
 async function revalidateIntake() {
   if (!intakeResult) return;
+  const seq = ++intakeValidateSeq;
   const payload = collectIntakePayload();
   const prevMeta = intakeResult.meta;
   const res = await api("/api/po-intake/validate", { method: "POST", body: JSON.stringify(payload) });
+  if (seq !== intakeValidateSeq) return;
   res.meta = prevMeta;
   renderIntake(res);
 }
