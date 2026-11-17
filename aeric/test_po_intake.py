@@ -167,3 +167,9 @@ def test_upload_error_handling():
     assert client.post("/api/po-intake", files={"file": ("bad.exe", b"mz", "application/octet-stream")}).status_code == 415
     assert client.post("/api/po-intake", files={"file": ("empty.txt", b"", "text/plain")}).status_code == 400
     assert client.post("/api/po-intake", files={"file": ("fake.pdf", b"not-a-pdf", "application/pdf")}).status_code == 415
+
+
+def test_destination_label_variants_fill_the_port():
+    for label in ("Destination", "Final Destination", "Ship to Port", "Destination Port"):
+        po, _ = po_parser.parse_po("po.txt", text=f"PO Number: A1\nBuyer: Z\n{label}: Hanoi\n")
+        assert po["port"] == "Hanoi", label

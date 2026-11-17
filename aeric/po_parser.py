@@ -25,7 +25,7 @@ LABELS = {
     "po_number": r"(?:customer\s*)?(?:p\.?\s?o\.?|purchase\s*order)\s*(?:no\.?|number|num|ref(?:erence)?|#)?",
     "buyer": r"(?:buyer|customer|bill\s*to|sold\s*to|company|from)",
     "buyer_email": r"(?:buyer\s*)?e-?mail",
-    "port": r"(?:port\s*of\s*(?:destination|discharge|delivery|entry)|destination\s*port|discharge\s*port|port|pod)",
+    "port": r"(?:port\s*of\s*(?:destination|discharge|delivery|entry)|(?:final\s*)?destination(?:\s*port)?|ship\s*to\s*port|discharge\s*port|port|pod)",
     "order_date": r"(?:order|po|issue|issued)\s*date|date\s*issued|date",
     "delivery_date": r"(?:(?:requested\s*)?(?:delivery|ship(?:ment|ping)?|required|due|ex-?factory|etd|eta)\s*(?:date|by)?)",
     "currency": r"currency",
