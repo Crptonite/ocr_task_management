@@ -1,6 +1,6 @@
 {
   "framework": null,
   "installCommand": "",
-  "buildCommand": "",
+  "buildCommand": "mkdir -p frontend/aeric && cp aeric/po_intake.js frontend/aeric/po_intake.js",
   "outputDirectory": "frontend"
 }
