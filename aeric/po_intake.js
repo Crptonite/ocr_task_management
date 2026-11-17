@@ -6,6 +6,20 @@ let intakeFile = null;
 let intakeSourceLabel = "manual entry";
 let intakeTimer = null;
 
+// Scoped layout fixes kept in aeric/ (shared styles.css is locked): honour [hidden] on the empty state
+// and stop the wide line-item table from pushing the panel past the viewport.
+(function injectIntakeStyles() {
+  const style = document.createElement("style");
+  style.textContent = `
+    .intake-empty[hidden], #intake-workspace[hidden] { display: none !important; }
+    .intake-grid > *, .intake-panel, #intake-workspace { min-width: 0; max-width: 100%; }
+    .intake-table { display: block; max-width: 100%; overflow-x: auto; }
+    .intake-fields { min-width: 0; }
+    .intake-fields input, .intake-fields select { min-width: 0; max-width: 100%; }
+  `;
+  document.head.appendChild(style);
+})();
+
 const INTAKE_FIELDS = ["po_number", "buyer", "buyer_email", "port", "order_date", "delivery_date", "currency"];
 
 function collectIntakePayload() {
