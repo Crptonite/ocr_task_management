@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
+import sys
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
@@ -7,11 +8,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+ROOT_DIR = Path(__file__).resolve().parents[2]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from app import database, store
 from app.services import autofill, documents as documents_service, supabase_store
 from app.routers import documents, invoice_generator, invoice_queue, invoices, orders, planning, projects
+from aeric import router as po_intake
 
-FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+FRONTEND_DIR = ROOT_DIR / "frontend"
+AERIC_DIR = ROOT_DIR / "aeric"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -58,6 +65,7 @@ app.include_router(documents.router)  # combined document list + CSV
 app.include_router(invoices.router)  # Koda: invoice checking
 app.include_router(invoice_generator.router)  # standalone invoice generator
 app.include_router(orders.router)    # Spectra: order automation
+app.include_router(po_intake.router)  # Koda 6a: PO intake & validation
 app.include_router(invoice_queue.router)  # Spectra: review invoice queue for approved orders
 app.include_router(projects.router)  # EM Services: project tracker
 app.include_router(planning.router)  # Koda: material requirements and production priorities
@@ -87,6 +95,10 @@ def _page(filename: str):
 for route, filename in PAGES.items():
     app.add_api_route(route, _page(filename), methods=["GET"], include_in_schema=False)
 
+
+# Mount Aeric's 6a frontend script before the catch-all "/" static mount.
+if AERIC_DIR.exists():
+    app.mount("/aeric", StaticFiles(directory=AERIC_DIR), name="aeric")
 
 # Serve the static frontend at / (keep this last so /api routes win).
 if FRONTEND_DIR.exists():

@@ -64,7 +64,11 @@ $("#confirm-modal")?.addEventListener("click", (e) => {
   if (e.target.id === "confirm-modal") closeModal(false);
 });
 addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !$("#confirm-modal")?.hidden) closeModal(false);
+  if (e.key === "Escape") {
+    if (!$("#confirm-modal")?.hidden) closeModal(false);
+    const em = $("#po-email-modal");
+    if (em && !em.hidden) em.hidden = true;
+  }
 });
 
 async function confirmAndDownload(url, labelText) {
@@ -93,8 +97,68 @@ $("#theme-toggle")?.addEventListener("click", () => {
 // Solid nav after scrolling past the hero
 const nav = $(".nav");
 if (nav) {
-  addEventListener("scroll", () => nav.classList.toggle("scrolled", scrollY > $(".hero").offsetHeight * 0.8));
+  addEventListener("scroll", () => nav.classList.toggle("scrolled", scrollY > ($(".hero")?.offsetHeight || 200) * 0.7));
 }
+
+/* ---------- Sidebar & Nested Navigation ---------- */
+
+const workspaceEl = $("#workspace");
+const sidebarScrim = $("#sidebar-scrim");
+const sidebarToggleBtn = $("#sidebar-toggle");
+const isMobileLayout = () => innerWidth <= 960;
+
+try {
+  if (!isMobileLayout() && localStorage.getItem("koda-sb-collapsed") === "1") {
+    workspaceEl?.classList.add("sidebar-collapsed");
+    sidebarToggleBtn?.setAttribute("aria-expanded", "false");
+  }
+} catch {}
+
+function closeMobileSidebar() {
+  workspaceEl?.classList.remove("sidebar-open");
+  if (sidebarScrim) sidebarScrim.hidden = true;
+}
+
+sidebarToggleBtn?.addEventListener("click", () => {
+  if (!workspaceEl) return;
+  if (isMobileLayout()) {
+    const open = workspaceEl.classList.toggle("sidebar-open");
+    if (sidebarScrim) sidebarScrim.hidden = !open;
+    sidebarToggleBtn.setAttribute("aria-expanded", String(open));
+  } else {
+    const collapsed = workspaceEl.classList.toggle("sidebar-collapsed");
+    sidebarToggleBtn.setAttribute("aria-expanded", String(!collapsed));
+    try { localStorage.setItem("koda-sb-collapsed", collapsed ? "1" : "0"); } catch {}
+  }
+});
+sidebarScrim?.addEventListener("click", closeMobileSidebar);
+
+function triggerSearchAction() {
+  const currentTab = $(".nav nav a.active")?.dataset.tab || "orders";
+  if (currentTab === "orders") {
+    $("#intake-raw-text")?.focus();
+    $("#intake-raw-text")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  } else {
+    location.hash = "#orders/intake";
+    setTimeout(() => $("#intake-raw-text")?.focus(), 150);
+  }
+}
+$("#nav-search-btn")?.addEventListener("click", triggerSearchAction);
+window.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    triggerSearchAction();
+  }
+});
+
+$$("[data-toggle-group]").forEach((btn) =>
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const grp = btn.closest(".sb-group");
+    const open = grp.classList.toggle("open");
+    btn.setAttribute("aria-expanded", String(open));
+  })
+);
 
 async function api(path, options = {}) {
   const headers = { ...options.headers };
@@ -152,34 +216,92 @@ const HERO = {
     lede: "Customer orders are broken into materials, checked against stock and deliveries, and ranked so planners can act on shortages early.",
   },
 };
+const SECTION_ROUTES = {
+  "orders/intake": { tab: "orders", section: "ord-intake" },
+  "orders/queue": { tab: "orders", section: "ord-queue" },
+  "orders/upload": { tab: "orders", section: "ord-upload" },
+  "documents/all": { tab: "documents", section: "doc-all" },
+  "invoices/queue": { tab: "invoices", section: "inv-queue" },
+  "invoices/pos": { tab: "invoices", section: "inv-pos" },
+  "invoices/create": { tab: "invoices", section: "inv-create" },
+  "invoices/upload": { tab: "invoices", section: "inv-upload" },
+  "projects/list": { tab: "projects", section: "prj-list" },
+  "projects/board": { tab: "projects", section: "project-board" },
+  "planning/build": { tab: "planning", section: "pln-build" },
+  "planning/materials": { tab: "planning", section: "pln-materials" },
+  "planning/purchases": { tab: "planning", section: "pln-purchases" },
+};
+const DEFAULT_SECTION = {
+  orders: "ord-intake",
+  documents: "doc-all",
+  invoices: "inv-queue",
+  projects: "prj-list",
+  planning: "pln-build",
+};
 const loaded = {};
 
-function showTab() {
-  const tab = HERO[location.hash.slice(1)] ? location.hash.slice(1) : "documents";
+function parseRoute() {
+  const raw = location.hash.slice(1);
+  if (SECTION_ROUTES[raw]) return SECTION_ROUTES[raw];
+  const tab = HERO[raw] ? raw : "documents";
+  return { tab, section: DEFAULT_SECTION[tab] || null };
+}
+
+function updateSidebarActive(tab, section) {
+  $$(".sb-group").forEach((grp) => {
+    const isTab = grp.dataset.group === tab;
+    $(".sb-parent-row", grp)?.classList.toggle("active", isTab);
+    if (isTab) {
+      grp.classList.add("open");
+      $(".sb-chev", grp)?.setAttribute("aria-expanded", "true");
+    }
+  });
+  $$(".sb-child").forEach((a) => a.classList.toggle("active", a.dataset.section === section));
+  $$(".block.section-focus").forEach((b) => b.classList.remove("section-focus"));
+  if (section) $(`#${section}`)?.classList.add("section-focus");
+}
+
+function focusSection(section) {
+  if (!section) return;
+  const el = $(`#${section}`);
+  if (!el) return;
+  if (section === "project-board" && el.hidden) {
+    $("#prj-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+}
+
+function showTab(scrollToSection = false) {
+  const { tab, section } = parseRoute();
   $$(".view").forEach((v) => (v.hidden = v.dataset.view !== tab));
   $$("[data-tab]").forEach((a) => a.classList.toggle("active", a.dataset.tab === tab));
+  updateSidebarActive(tab, section);
   $("#hero-eyebrow").textContent = HERO[tab].eyebrow;
   $("#hero-title").innerHTML = HERO[tab].title;
   $("#hero-lede").textContent = HERO[tab].lede;
+  const done = () => {
+    if (scrollToSection && location.hash.includes("/")) focusSection(section);
+  };
   if (!loaded[tab] || tab === "documents") {  // documents change from other tabs, so always refetch
     loaded[tab] = true;
-    LOADERS[tab]().catch(() => {
-      loaded[tab] = false;
-      const container = $(`[data-view="${tab}"] tbody, [data-view="${tab}"] .cards`);
-      if (container) {
-        container.innerHTML = `<p class="muted">${esc(OFFLINE_HINT)}</p>`;
-      }
-    });
+    LOADERS[tab]()
+      .then(done)
+      .catch(() => {
+        loaded[tab] = false;
+        const container = $(`[data-view="${tab}"] tbody, [data-view="${tab}"] .cards`);
+        if (container) {
+          container.innerHTML = `<p class="muted">${esc(OFFLINE_HINT)}</p>`;
+        }
+      });
+  } else {
+    done();
   }
+  closeMobileSidebar();
 }
 
 addEventListener("hashchange", () => {
-  showTab();
-  const hero = $(".hero");
-  if (hero && nav) {
-    const contentTop = hero.offsetHeight - nav.offsetHeight;
-    if (scrollY > contentTop) scrollTo({ top: contentTop });
-  }
+  showTab(true);
 });
 
 /* ---------- Documents overview ---------- */
@@ -863,6 +985,8 @@ function renderOrders() {
 async function loadOrders() {
   [orders, invoiceQueue, catalog] = await Promise.all([api("/api/orders"), api("/api/invoice-queue"), api("/api/catalog")]);
   $("#catalog-names").innerHTML = catalog.map((c) => `<option value="${esc(c.name)}">${esc(c.sku)} · ${c.unit_price.toFixed(2)}</option>`).join("");
+  wireIntakeEvents();
+  await loadIntakeSamples().catch(() => {});
   renderOrders();
   renderInvoiceQueue();
 }
@@ -1343,4 +1467,4 @@ $$("form[data-upload]").forEach((form) => {
 
 // Init
 const LOADERS = { documents: loadDocuments, invoices: loadInvoices, orders: loadOrders, projects: loadProjects, planning: loadPlanning };
-showTab();
+showTab(true);

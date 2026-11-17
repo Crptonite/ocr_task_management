@@ -1,32 +1,36 @@
-
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Invoice Management</title>
-
+<title>Invoice Management · Koda</title>
+<script>
+  document.documentElement.dataset.theme = localStorage.getItem("koda-theme") || (matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light");
+</script>
 <style>
-:root {
-  --bg:#faf8f5;
-  --fg:#1f1d1a;
-  --muted:#77716a;
-  --line:#e3ded6;
-  --card:#fff;
-  --accent:#1f1d1a;
-  --danger:#dc2626;
-  --success:#15803d;
+:root,
+[data-theme="light"] {
+  --bg:#f8f6f2;
+  --fg:#161514;
+  --muted:#666059;
+  --line:#ded8ce;
+  --card:#ffffff;
+  --accent:#8f6030;
+  --accent-ink:#ffffff;
+  --danger:#a82e24;
+  --success:#266c3a;
 }
 
-@media(prefers-color-scheme:dark) {
-  :root {
-    --bg:#161513;
-    --fg:#f0ece6;
-    --muted:#aaa39a;
-    --line:#33302c;
-    --card:#1e1c1a;
-    --accent:#f0ece6;
-  }
+[data-theme="dark"] {
+  --bg:#0b0b0c;
+  --fg:#f2f0ec;
+  --muted:#98938b;
+  --line:#27282e;
+  --card:#141416;
+  --accent:#d4a976;
+  --accent-ink:#16110b;
+  --danger:#e3685b;
+  --success:#68b67a;
 }
 
 * { box-sizing:border-box; }
@@ -38,11 +42,30 @@ body {
   font:15px/1.5 system-ui,sans-serif;
 }
 
+a { color:inherit; text-decoration:none; }
+
 main {
   max-width:1050px;
   margin:auto;
-  padding:32px 16px 64px;
+  padding:28px 16px 64px;
 }
+
+.topbar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding-bottom:16px;
+  margin-bottom:22px;
+  border-bottom:1px solid var(--line);
+}
+
+.back-link {
+  font-size:13px;
+  font-weight:600;
+  color:var(--muted);
+}
+.back-link:hover { color:var(--accent); }
 
 .header {
   display:flex;
@@ -50,30 +73,31 @@ main {
   align-items:center;
   gap:15px;
   flex-wrap:wrap;
-  margin-bottom:25px;
+  margin-bottom:22px;
 }
 
-h1 { margin:0; }
+h1 { margin:0; font-size:24px; }
 h2 { font-size:17px; margin:25px 0 12px; }
 
 .muted { color:var(--muted); }
 
-button {
+button, .btn-link {
   font:inherit;
   padding:9px 14px;
-  border-radius:8px;
+  border-radius:6px;
   border:1px solid var(--line);
   background:var(--card);
   color:var(--fg);
   cursor:pointer;
 }
 
-button:hover { opacity:.8; }
+button:hover, .btn-link:hover { border-color:var(--accent); }
 
 button.primary {
   background:var(--accent);
-  color:var(--bg);
+  color:var(--accent-ink);
   border-color:var(--accent);
+  font-weight:600;
 }
 
 button.danger {
@@ -91,7 +115,7 @@ button.danger {
 .sidebar {
   background:var(--card);
   border:1px solid var(--line);
-  border-radius:12px;
+  border-radius:8px;
   padding:15px;
 }
 
@@ -113,7 +137,7 @@ button.danger {
   width:100%;
   padding:11px;
   border:1px solid var(--line);
-  border-radius:8px;
+  border-radius:6px;
 }
 
 .invoice-tab.active {
@@ -134,7 +158,7 @@ button.danger {
 .editor {
   background:var(--card);
   border:1px solid var(--line);
-  border-radius:12px;
+  border-radius:8px;
   padding:22px;
   min-width:0;
 }
@@ -159,14 +183,12 @@ input,select {
   font:inherit;
   padding:9px 10px;
   border:1px solid var(--line);
-  border-radius:8px;
+  border-radius:6px;
   background:var(--bg);
   color:var(--fg);
 }
 
-.table-wrap {
-  overflow-x:auto;
-}
+.table-wrap { overflow-x:auto; }
 
 table {
   width:100%;
@@ -181,18 +203,10 @@ th {
   padding:9px 5px;
 }
 
-td {
-  padding:5px;
-}
-
+td { padding:5px; }
 td input { width:100%; }
-
 .num { text-align:right; }
-
-td.amt {
-  text-align:right;
-  white-space:nowrap;
-}
+td.amt { text-align:right; white-space:nowrap; }
 
 .totals {
   margin:20px 0 0 auto;
@@ -224,6 +238,7 @@ td.amt {
 .message {
   margin-top:12px;
   color:var(--danger);
+  font-size:14px;
 }
 
 .empty {
@@ -233,15 +248,8 @@ td.amt {
 }
 
 @media(max-width:700px) {
-  .invoice-layout {
-    grid-template-columns:1fr;
-  }
-
-  .invoice-list {
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
-
+  .invoice-layout { grid-template-columns:1fr; }
+  .invoice-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
   .editor { padding:15px; }
 }
 </style>
@@ -249,6 +257,11 @@ td.amt {
 
 <body>
 <main>
+
+<div class="topbar">
+  <a href="./#invoices" class="back-link">← Back to Koda Workspace</a>
+  <button type="button" id="themeBtn">Toggle Theme</button>
+</div>
 
 <div class="header">
   <div>
@@ -284,7 +297,14 @@ td.amt {
 </main>
 
 <script>
+const API = localStorage.getItem("koda-api") || (location.protocol === "file:" ? "http://localhost:8000" : "");
 const $ = (s, root = document) => root.querySelector(s);
+
+$("#themeBtn").onclick = () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem("koda-theme", next);
+};
 
 const invoiceList = $("#invoiceList");
 const editor = $("#editor");
@@ -295,11 +315,10 @@ let nextNumber = 1;
 
 function createInvoiceData() {
   const number = String(nextNumber++).padStart(3, "0");
-
   const today = new Date().toISOString().slice(0, 10);
 
   return {
-    id: crypto.randomUUID(),
+    id: crypto.randomUUID ? crypto.randomUUID() : `inv-${Date.now()}-${number}`,
     invoice_number: `INV-${number}`,
     seller: "",
     buyer: "",
@@ -324,23 +343,23 @@ function currentInvoice() {
 }
 
 function money(value, currency) {
-  return new Intl.NumberFormat("en-SG", {
-    style: "currency",
-    currency
-  }).format(value || 0);
+  try {
+    return new Intl.NumberFormat("en-SG", {
+      style: "currency",
+      currency
+    }).format(value || 0);
+  } catch {
+    return `${currency} ${Number(value || 0).toFixed(2)}`;
+  }
 }
 
 function calculate(invoice) {
   const subtotal = invoice.items.reduce((sum, item) => {
-    return sum + (Number(item.quantity) || 0) *
-      (Number(item.unit_price) || 0);
+    return sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
   }, 0);
 
   const roundedSubtotal = Math.round(subtotal * 100) / 100;
-
-  const gst = Math.round(
-    roundedSubtotal * invoice.gst_rate / 100 * 100
-  ) / 100;
+  const gst = Math.round(roundedSubtotal * invoice.gst_rate / 100 * 100) / 100;
 
   return {
     subtotal: roundedSubtotal,
@@ -351,10 +370,8 @@ function calculate(invoice) {
 
 function createNewInvoice() {
   const invoice = createInvoiceData();
-
   invoices.push(invoice);
   activeId = invoice.id;
-
   render();
 }
 
@@ -365,19 +382,13 @@ function selectInvoice(id) {
 
 function deleteInvoice(id) {
   const invoice = invoices.find(i => i.id === id);
-
   if (!invoice) return;
-
   if (!confirm(`Delete ${invoice.invoice_number}?`)) return;
 
   invoices = invoices.filter(i => i.id !== id);
-
   if (activeId === id) {
-    activeId = invoices.length
-      ? invoices[invoices.length - 1].id
-      : null;
+    activeId = invoices.length ? invoices[invoices.length - 1].id : null;
   }
-
   render();
 }
 
@@ -387,26 +398,22 @@ function duplicateInvoice(id) {
 
   const copy = structuredClone(original);
   const number = String(nextNumber++).padStart(3, "0");
-
-  copy.id = crypto.randomUUID();
+  copy.id = crypto.randomUUID ? crypto.randomUUID() : `inv-${Date.now()}-${number}`;
   copy.invoice_number = `INV-${number}`;
 
   invoices.push(copy);
   activeId = copy.id;
-
   render();
 }
 
 function renderList() {
   $("#invoiceCount").textContent = invoices.length;
-
   invoiceList.innerHTML = "";
 
   invoices.forEach(invoice => {
     const tab = document.createElement("button");
-
-    tab.className = "invoice-tab" +
-      (invoice.id === activeId ? " active" : "");
+    tab.type = "button";
+    tab.className = "invoice-tab" + (invoice.id === activeId ? " active" : "");
 
     const number = document.createElement("strong");
     number.textContent = invoice.invoice_number;
@@ -415,9 +422,7 @@ function renderList() {
     buyer.textContent = invoice.buyer || "No buyer";
 
     tab.append(number, buyer);
-
     tab.onclick = () => selectInvoice(invoice.id);
-
     invoiceList.append(tab);
   });
 }
@@ -435,7 +440,6 @@ function renderEditor() {
         </button>
       </div>
     `;
-
     $("#firstInvoice").onclick = createNewInvoice;
     return;
   }
@@ -450,61 +454,47 @@ function renderEditor() {
       </div>
 
       <div class="actions" style="margin:0">
-        <button type="button" id="duplicateInvoice">
-          Duplicate
-        </button>
-        <button type="button" class="danger" id="deleteInvoice">
-          Delete
-        </button>
+        <button type="button" id="duplicateInvoice">Duplicate</button>
+        <button type="button" class="danger" id="deleteInvoice">Delete</button>
       </div>
     </div>
 
     <form id="invoiceForm">
-
       <div class="grid">
-
         <label>Invoice number
-          <input name="invoice_number" required maxlength="50">
+          <input name="invoice_number" required maxlength="40">
         </label>
-
         <label>Seller
-          <input name="seller" required maxlength="200">
+          <input name="seller" required maxlength="120">
         </label>
-
         <label>Buyer
-          <input name="buyer" required maxlength="200">
+          <input name="buyer" required maxlength="120">
         </label>
-
         <label>Issue date
           <input type="date" name="issue_date" required>
         </label>
-
         <label>Service date
           <input type="date" name="service_date" required>
         </label>
-
         <label>Payment method
           <input name="payment_method" required maxlength="100">
         </label>
-
         <label>Payment date
           <input type="date" name="payment_date" required>
         </label>
-
         <label>Currency
           <select name="currency">
             <option value="SGD">SGD</option>
             <option value="USD">USD</option>
             <option value="EUR">EUR</option>
             <option value="GBP">GBP</option>
+            <option value="MYR">MYR (RM)</option>
+            <option value="VND">VND (₫)</option>
           </select>
         </label>
-
         <label>GST rate (%)
-          <input type="number" name="gst_rate"
-            min="0" max="100" step="0.1" required>
+          <input type="number" name="gst_rate" min="0" max="100" step="0.1" required>
         </label>
-
       </div>
 
       <h2>Invoice Items</h2>
@@ -524,47 +514,26 @@ function renderEditor() {
         </table>
       </div>
 
-      <button type="button" id="addItem" style="margin-top:10px">
-        + Add Item
-      </button>
+      <button type="button" id="addItem" style="margin-top:10px">+ Add Item</button>
 
       <div class="totals">
-        <div>
-          <span>Subtotal</span>
-          <span id="subtotal">0.00</span>
-        </div>
-
-        <div>
-          <span>GST</span>
-          <span id="gst">0.00</span>
-        </div>
-
-        <div class="grand">
-          <span>Total</span>
-          <span id="total">0.00</span>
-        </div>
+        <div><span>Subtotal</span><span id="subtotal">0.00</span></div>
+        <div><span>GST</span><span id="gst">0.00</span></div>
+        <div class="grand"><span>Total</span><span id="total">0.00</span></div>
       </div>
 
       <div class="actions">
-        <button type="submit" class="primary">
-          Download PDF
-        </button>
+        <button type="submit" class="primary">Download PDF</button>
       </div>
 
       <div id="message" class="message"></div>
-
     </form>
   `;
 
   const form = $("#invoiceForm");
-
-  // Populate invoice fields.
   Object.entries(invoice).forEach(([key, value]) => {
     if (key === "items" || key === "id") return;
-
-    if (form.elements[key]) {
-      form.elements[key].value = value;
-    }
+    if (form.elements[key]) form.elements[key].value = value;
   });
 
   renderItems();
@@ -584,70 +553,38 @@ function renderEditor() {
 
   $("#addItem").onclick = () => {
     saveFields();
-
-    invoice.items.push({
-      description: "",
-      quantity: 1,
-      unit_price: 0
-    });
-
+    invoice.items.push({ description: "", quantity: 1, unit_price: 0 });
     renderItems();
     recalculate();
   };
 
-  $("#deleteInvoice").onclick = () => {
-    deleteInvoice(invoice.id);
-  };
-
+  $("#deleteInvoice").onclick = () => deleteInvoice(invoice.id);
   $("#duplicateInvoice").onclick = () => {
     saveFields();
     duplicateInvoice(invoice.id);
   };
-
   form.addEventListener("submit", downloadPDF);
 }
 
 function escapeHTML(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[char]);
 }
 
 function renderItems() {
   const invoice = currentInvoice();
   const tbody = $("#itemRows");
-
   tbody.innerHTML = "";
 
   invoice.items.forEach((item, index) => {
     const tr = document.createElement("tr");
-
     tr.innerHTML = `
-      <td>
-        <input class="description" maxlength="200"
-          required placeholder="Item description">
-      </td>
-
-      <td>
-        <input class="quantity num" type="number"
-          min="0.01" step="any" required>
-      </td>
-
-      <td>
-        <input class="price num" type="number"
-          min="0" step="0.01" required>
-      </td>
-
+      <td><input class="description" maxlength="200" required placeholder="Item description"></td>
+      <td><input class="quantity num" type="number" min="0.01" step="any" required></td>
+      <td><input class="price num" type="number" min="0" step="0.01" required></td>
       <td class="amt">0.00</td>
-
-      <td>
-        <button type="button" class="remove danger"
-          aria-label="Remove item">×</button>
-      </td>
+      <td><button type="button" class="remove danger" aria-label="Remove item">×</button></td>
     `;
 
     $(".description", tr).value = item.description;
@@ -663,14 +600,11 @@ function renderItems() {
 
     $(".remove", tr).onclick = () => {
       saveItems();
-
       if (invoice.items.length <= 1) {
         alert("An invoice must have at least one item.");
         return;
       }
-
       invoice.items.splice(index, 1);
-
       renderItems();
       recalculate();
     };
@@ -682,31 +616,16 @@ function renderItems() {
 function saveFields() {
   const invoice = currentInvoice();
   const form = $("#invoiceForm");
-
   if (!invoice || !form) return;
 
-  [
-    "invoice_number",
-    "seller",
-    "buyer",
-    "issue_date",
-    "service_date",
-    "payment_method",
-    "payment_date",
-    "currency"
-  ].forEach(key => {
-    invoice[key] = form.elements[key].value;
-  });
-
-  invoice.gst_rate =
-    Number(form.elements.gst_rate.value) || 0;
+  ["invoice_number", "seller", "buyer", "issue_date", "service_date", "payment_method", "payment_date", "currency"]
+    .forEach(key => { invoice[key] = form.elements[key].value; });
+  invoice.gst_rate = Number(form.elements.gst_rate.value) || 0;
 }
 
 function saveItems() {
   const invoice = currentInvoice();
-
   if (!invoice) return;
-
   invoice.items = [...$("#itemRows").children].map(tr => ({
     description: $(".description", tr).value,
     quantity: Number($(".quantity", tr).value),
@@ -726,30 +645,17 @@ function recalculate() {
 
   [...$("#itemRows").children].forEach((tr, index) => {
     const item = invoice.items[index];
-
-    const amount =
-      (Number(item.quantity) || 0) *
-      (Number(item.unit_price) || 0);
-
-    $(".amt", tr).textContent = money(
-      Math.round(amount * 100) / 100,
-      currency
-    );
+    const amount = (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
+    $(".amt", tr).textContent = money(Math.round(amount * 100) / 100, currency);
   });
 
-  $("#subtotal").textContent =
-    money(totals.subtotal, currency);
-
-  $("#gst").textContent =
-    money(totals.gst, currency);
-
-  $("#total").textContent =
-    money(totals.total, currency);
+  $("#subtotal").textContent = money(totals.subtotal, currency);
+  $("#gst").textContent = money(totals.gst, currency);
+  $("#total").textContent = money(totals.total, currency);
 }
 
 async function downloadPDF(event) {
   event.preventDefault();
-
   const invoice = currentInvoice();
   const form = $("#invoiceForm");
   const message = $("#message");
@@ -762,25 +668,21 @@ async function downloadPDF(event) {
 
   if (!invoice.items.every(item =>
     item.description.trim() &&
-    Number.isFinite(item.quantity) &&
-    item.quantity > 0 &&
-    Number.isFinite(item.unit_price) &&
-    item.unit_price >= 0
+    Number.isFinite(item.quantity) && item.quantity > 0 &&
+    Number.isFinite(item.unit_price) && item.unit_price >= 0
   )) {
+    message.style.color = "var(--danger)";
     message.textContent = "Please check your invoice items.";
     return;
   }
 
   if (!invoice.invoice_number.trim()) {
+    message.style.color = "var(--danger)";
     message.textContent = "Invoice number is required.";
     return;
   }
 
-  const body = {
-    ...invoice,
-    gst_rate: invoice.gst_rate / 100
-  };
-
+  const body = { ...invoice, gst_rate: invoice.gst_rate / 100 };
   const button = form.querySelector('button[type="submit"]');
 
   button.disabled = true;
@@ -788,42 +690,34 @@ async function downloadPDF(event) {
   message.textContent = "";
 
   try {
-    const response = await fetch(
-      "/api/invoice-generator/pdf",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      }
-    );
+    const response = await fetch(API + "/api/invoice-generator/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
 
     if (!response.ok) {
-      throw new Error("PDF generation failed.");
+      const errBody = await response.json().catch(() => ({}));
+      const detail = Array.isArray(errBody.detail)
+        ? errBody.detail.map(d => d.msg || d.loc?.join(".")).join("; ")
+        : errBody.detail;
+      throw new Error(detail || "PDF generation failed.");
     }
 
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
-
     const link = document.createElement("a");
-
     link.href = url;
-    link.download = `${invoice.invoice_number}.pdf`;
-
+    link.download = `${invoice.invoice_number.trim()}.pdf`;
     document.body.append(link);
     link.click();
     link.remove();
-
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 
     message.textContent = "PDF downloaded successfully!";
     message.style.color = "var(--success)";
-
   } catch (error) {
-    message.textContent =
-      error.message || "Could not generate PDF.";
-
+    message.textContent = error.message || "Could not generate PDF.";
     message.style.color = "var(--danger)";
   } finally {
     button.disabled = false;
@@ -837,10 +731,7 @@ function render() {
 }
 
 $("#newInvoice").onclick = createNewInvoice;
-
 $("#firstInvoice").onclick = createNewInvoice;
-
-// Start with one invoice.
 createNewInvoice();
 </script>
 
