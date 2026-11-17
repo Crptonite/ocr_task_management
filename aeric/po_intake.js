@@ -16,8 +16,31 @@ let intakeTimer = null;
     .intake-table { display: block; max-width: 100%; overflow-x: auto; }
     .intake-fields { min-width: 0; }
     .intake-fields input, .intake-fields select { min-width: 0; max-width: 100%; }
+    .intake-table input[name="sku"] { min-width: 130px; }
+    .intake-table input[name="description"] { min-width: 210px; }
+    [data-theme="dark"] .modal-box, [data-theme="dark"] .intake-panel { color-scheme: dark; }
+    [data-theme="dark"] .email-fields textarea, [data-theme="dark"] .email-fields input,
+    [data-theme="dark"] .intake-text-label textarea { background: transparent; color: inherit; color-scheme: dark; }
   `;
   document.head.appendChild(style);
+
+  // No favicon is shipped, so stop the browser asking for /favicon.ico (404 in the console).
+  if (!document.querySelector('link[rel~="icon"]')) {
+    const icon = document.createElement("link");
+    icon.rel = "icon";
+    icon.href = "data:,";
+    document.head.appendChild(icon);
+  }
+
+  // Browsers warn when a form control has neither id nor name; give any unnamed intake control a name.
+  const nameControls = () => {
+    document.querySelectorAll("#intake-workspace, #po-email-modal, #intake-empty, [data-section='ord-intake']")
+      .forEach((root) => root.querySelectorAll("input, textarea, select").forEach((el, i) => {
+        if (!el.id && !el.name) el.name = el.getAttribute("aria-label")?.toLowerCase().replace(/\W+/g, "-") || `po-field-${i}`;
+      }));
+  };
+  document.addEventListener("DOMContentLoaded", nameControls);
+  window.addEventListener("load", nameControls);
 })();
 
 const INTAKE_FIELDS = ["po_number", "buyer", "buyer_email", "port", "order_date", "delivery_date", "currency"];
