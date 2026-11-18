@@ -219,6 +219,7 @@ const HERO = {
 const SECTION_ROUTES = {
   "orders/intake": { tab: "orders", section: "ord-intake" },
   "orders/queue": { tab: "orders", section: "ord-queue" },
+  "orders/bridge": { tab: "orders", section: "ord-bridge" },
   "orders/upload": { tab: "orders", section: "ord-upload" },
   "documents/all": { tab: "documents", section: "doc-all" },
   "invoices/queue": { tab: "invoices", section: "inv-queue" },
@@ -989,6 +990,7 @@ async function loadOrders() {
   await loadIntakeSamples().catch(() => {});
   renderOrders();
   renderInvoiceQueue();
+  if (typeof loadErpBridge === "function") loadErpBridge().catch(() => {});
 }
 
 /* ---------- Spectra: review invoice queue ---------- */

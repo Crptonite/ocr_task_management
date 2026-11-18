@@ -16,9 +16,11 @@ from app import database, store
 from app.services import autofill, documents as documents_service, supabase_store
 from app.routers import documents, invoice_generator, invoice_queue, invoices, orders, planning, projects
 from aeric import router as po_intake
+from wesley import router as erp_bridge
 
 FRONTEND_DIR = ROOT_DIR / "frontend"
 AERIC_DIR = ROOT_DIR / "aeric"
+WESLEY_DIR = ROOT_DIR / "wesley"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -66,6 +68,7 @@ app.include_router(invoices.router)  # Koda: invoice checking
 app.include_router(invoice_generator.router)  # standalone invoice generator
 app.include_router(orders.router)    # Spectra: order automation
 app.include_router(po_intake.router)  # Koda 6a: PO intake & validation
+app.include_router(erp_bridge.router)  # Koda 6a Part 2: SG-VN ERP bridge & price masking
 app.include_router(invoice_queue.router)  # Spectra: review invoice queue for approved orders
 app.include_router(projects.router)  # EM Services: project tracker
 app.include_router(planning.router)  # Koda: material requirements and production priorities
@@ -99,6 +102,10 @@ for route, filename in PAGES.items():
 # Mount Aeric's 6a frontend script before the catch-all "/" static mount.
 if AERIC_DIR.exists():
     app.mount("/aeric", StaticFiles(directory=AERIC_DIR), name="aeric")
+
+# Mount Wesley's 6a Part 2 ERP Bridge frontend script before the catch-all "/" static mount.
+if WESLEY_DIR.exists():
+    app.mount("/wesley", StaticFiles(directory=WESLEY_DIR), name="wesley")
 
 # Serve the static frontend at / (keep this last so /api routes win).
 if FRONTEND_DIR.exists():

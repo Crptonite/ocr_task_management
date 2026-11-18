@@ -1,0 +1,145 @@
+[
+  {
+    "sku": "KD-CH-2047",
+    "name": "Ashby oak dining chair",
+    "customer_list_price": 145.0,
+    "transfer_price": 96.0,
+    "suggested_transfer_price": 96.0,
+    "vn_item_code": "VN-BOM-CH2047",
+    "bom_summary": "Kiln-dried White Oak frame, Mortise joinery, PU Matte finish",
+    "lead_time_days": 21,
+    "plant": "Koda Vietnam - Binh Duong Plant 1"
+  },
+  {
+    "sku": "KD-TB-3110",
+    "name": "Ashby extending dining table",
+    "customer_list_price": 1280.0,
+    "transfer_price": 845.0,
+    "suggested_transfer_price": 845.0,
+    "vn_item_code": "VN-BOM-TB3110",
+    "bom_summary": "Solid Oak tabletop, Steel butterfly glide rail, Brass inserts",
+    "lead_time_days": 35,
+    "plant": "Koda Vietnam - Binh Duong Plant 1"
+  },
+  {
+    "sku": "KD-BN-1520",
+    "name": "Ashby oak bench 1.5m",
+    "customer_list_price": 420.0,
+    "transfer_price": 278.0,
+    "suggested_transfer_price": 278.0,
+    "vn_item_code": "VN-BOM-BN1520",
+    "bom_summary": "1.5m Oak seat slab, A-frame leg assembly, Cam-lock hardware",
+    "lead_time_days": 21,
+    "plant": "Koda Vietnam - Binh Duong Plant 1"
+  },
+  {
+    "sku": "KD-SB-4402",
+    "name": "Harlow teak sideboard",
+    "customer_list_price": 960.0,
+    "transfer_price": 635.0,
+    "suggested_transfer_price": 635.0,
+    "vn_item_code": "VN-BOM-SB4402",
+    "bom_summary": "FSC Teak veneer body, Soft-close Blum hinges, Solid brass pulls",
+    "lead_time_days": 42,
+    "plant": "Koda Vietnam - Binh Duong Plant 2"
+  },
+  {
+    "sku": "KD-CT-5208",
+    "name": "Harlow round coffee table",
+    "customer_list_price": 385.0,
+    "transfer_price": 252.0,
+    "suggested_transfer_price": 252.0,
+    "vn_item_code": "VN-BOM-CT5208",
+    "bom_summary": "Round teak radial veneer, Turned 3-leg base, Water-based lacquer",
+    "lead_time_days": 28,
+    "plant": "Koda Vietnam - Binh Duong Plant 2"
+  },
+  {
+    "sku": "KD-ST-6031",
+    "name": "Linden bar stool",
+    "customer_list_price": 118.0,
+    "transfer_price": 76.5,
+    "suggested_transfer_price": 76.5,
+    "vn_item_code": "VN-BOM-ST6031",
+    "bom_summary": "Ash wood frame, Brushed steel footrest, Linen seat pad",
+    "lead_time_days": 18,
+    "plant": "Koda Vietnam - Binh Duong Plant 1"
+  },
+  {
+    "sku": "KD-LC-7105",
+    "name": "Linden lounge chair",
+    "customer_list_price": 540.0,
+    "transfer_price": null,
+    "suggested_transfer_price": 355.0,
+    "vn_item_code": "VN-BOM-LC7105",
+    "bom_summary": "Bentwood ash shell, Boucle upholstery, Foam cushion pack",
+    "lead_time_days": 30,
+    "plant": "Koda Vietnam - Dong Nai Upholstery Line"
+  },
+  {
+    "sku": "LAP-TP-X1",
+    "name": "ThinkPad X1 Carbon Gen 12",
+    "customer_list_price": 2150.0,
+    "transfer_price": 1680.0,
+    "suggested_transfer_price": 1680.0,
+    "vn_item_code": "VN-SUB-X1G12",
+    "bom_summary": "Allocated enterprise unit - SG HQ IT procurement",
+    "lead_time_days": 10,
+    "plant": "SG HQ Fulfillment Hub"
+  },
+  {
+    "sku": "MON-DL-27",
+    "name": "Dell UltraSharp 27\" monitor",
+    "customer_list_price": 489.0,
+    "transfer_price": 370.0,
+    "suggested_transfer_price": 370.0,
+    "vn_item_code": "VN-SUB-DL27U",
+    "bom_summary": "27-inch IPS panel kit with factory calibration certificate",
+    "lead_time_days": 7,
+    "plant": "SG HQ Fulfillment Hub"
+  },
+  {
+    "sku": "DOC-USB-C",
+    "name": "USB-C docking station",
+    "customer_list_price": 189.0,
+    "transfer_price": 132.0,
+    "suggested_transfer_price": 132.0,
+    "vn_item_code": "VN-SUB-USBC",
+    "bom_summary": "Thunderbolt/USB-C dock assembly + 130W PSU",
+    "lead_time_days": 7,
+    "plant": "SG HQ Fulfillment Hub"
+  },
+  {
+    "sku": "SSD-SM-1T",
+    "name": "Samsung 990 Pro 1TB SSD",
+    "customer_list_price": 165.0,
+    "transfer_price": 124.0,
+    "suggested_transfer_price": 124.0,
+    "vn_item_code": "VN-SUB-SM1T",
+    "bom_summary": "NVMe Gen4 storage module",
+    "lead_time_days": 5,
+    "plant": "SG HQ Fulfillment Hub"
+  },
+  {
+    "sku": "SW-CS-24",
+    "name": "Cisco 24-port managed switch",
+    "customer_list_price": 1320.0,
+    "transfer_price": 990.0,
+    "suggested_transfer_price": 990.0,
+    "vn_item_code": "VN-SUB-CS24",
+    "bom_summary": "24-port PoE+ rack switch + dual PSU",
+    "lead_time_days": 14,
+    "plant": "SG HQ Fulfillment Hub"
+  },
+  {
+    "sku": "CBL-C6-3M",
+    "name": "Cat6 patch cable 3m",
+    "customer_list_price": 4.2,
+    "transfer_price": 2.4,
+    "suggested_transfer_price": 2.4,
+    "vn_item_code": "VN-SUB-C63M",
+    "bom_summary": "Shielded Cat6 3m harness",
+    "lead_time_days": 5,
+    "plant": "SG HQ Fulfillment Hub"
+  }
+]

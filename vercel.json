@@ -1,6 +1,6 @@
 {
   "framework": null,
   "installCommand": "",
-  "buildCommand": "mkdir -p frontend/aeric && cp aeric/po_intake.js frontend/aeric/po_intake.js",
+  "buildCommand": "mkdir -p frontend/aeric && cp aeric/po_intake.js frontend/aeric/po_intake.js && mkdir -p frontend/wesley && cp wesley/erp_bridge.js frontend/wesley/erp_bridge.js",
   "outputDirectory": "frontend"
 }

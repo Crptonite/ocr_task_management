@@ -76,6 +76,7 @@
             <div class="sb-children">
               <a href="#orders/intake" class="sb-child active" data-nav="orders" data-section="ord-intake">PO Intake &amp; Validation</a>
               <a href="#orders/queue" class="sb-child" data-nav="orders" data-section="ord-queue">Order Queue</a>
+              <a href="#orders/bridge" class="sb-child" data-nav="orders" data-section="ord-bridge">SG–VN ERP Bridge</a>
               <a href="#orders/upload" class="sb-child" data-nav="orders" data-section="ord-upload">Quick File Upload</a>
             </div>
           </div>
@@ -492,6 +493,67 @@
             </div>
           </section>
 
+          <!-- Wesley 6a Part 2: SG-to-Vietnam ERP Bridge Studio -->
+          <section class="block" id="ord-bridge">
+            <div class="block-head row">
+              <div>
+                <nav class="breadcrumb-trail" aria-label="Breadcrumb">
+                  <span>OPERATIONS (6A PART 2)</span>
+                  <span class="bc-sep">›</span>
+                  <span>ORDERS</span>
+                  <span class="bc-sep">›</span>
+                  <span class="bc-current">SG–VN ERP BRIDGE &amp; PRICE MASKING</span>
+                </nav>
+                <h2>SG–VN ERP Bridge &amp; Navision 2013 Export</h2>
+                <p class="muted">Convert approved Singapore HQ orders into Vietnam Factory SOs with BOM codes, strict customer contract price masking, lead-time risk advisories, and Dual Navision 2013 CSV/PDF exports.</p>
+              </div>
+              <div class="bridge-controls">
+                <div class="bridge-role-switch" role="group" aria-label="ERP Role View">
+                  <button type="button" class="bridge-role-btn active" data-bridge-role="sg">SG HQ Role</button>
+                  <button type="button" class="bridge-role-btn" data-bridge-role="vn">Vietnam Factory Role</button>
+                </div>
+                <label class="check" style="font-size:.78rem"><input type="checkbox" id="bridge-include-pending" /> Include pending</label>
+                <button type="button" class="btn btn-outline btn-sm" id="bridge-toggle-catalog">Transfer Price Table</button>
+                <button type="button" class="btn btn-outline btn-sm" id="bridge-refresh-btn">Refresh</button>
+              </div>
+            </div>
+
+            <div class="bridge-demo-bar">
+              <span class="sample-label">1-Click Demo Orders:</span>
+              <button type="button" class="chip" data-bridge-seed="clean">Clean Multi-SKU PO (Pottery Barn)</button>
+              <button type="button" class="chip" data-bridge-seed="rush">Rush Order Risk PO (Costco)</button>
+              <button type="button" class="chip" data-bridge-seed="unmapped">Unmapped Transfer Price PO (RH)</button>
+            </div>
+
+            <div class="bridge-stats" id="bridge-stats"></div>
+
+            <div class="split">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Order / VN SO</th>
+                      <th>Buyer / Port</th>
+                      <th>SKUs</th>
+                      <th>Lead-Time Risk</th>
+                      <th>Bridge Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bridge-rows">
+                    <tr>
+                      <td colspan="5" class="muted">Loading…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <aside class="detail" id="bridge-detail">
+                <p class="muted">Select an approved order to inspect its SG HQ vs. Vietnam Factory mapping.</p>
+              </aside>
+            </div>
+
+            <div class="bridge-catalog-drawer" id="bridge-catalog-drawer" hidden></div>
+          </section>
+
           <section class="block" id="ord-upload">
             <div class="block-head">
               <h2>Quick file upload</h2>
@@ -690,6 +752,7 @@
 
   <script src="js/scanner.js"></script>
   <script src="/aeric/po_intake.js"></script>
+  <script src="/wesley/erp_bridge.js"></script>
   <script src="js/app.js"></script>
 </body>
 
