@@ -56,15 +56,13 @@
   let drag = null;
   let view = { scale: 1 }; // display px per source px
 
-  const canStream = () => !!(navigator.mediaDevices?.getUserMedia && window.isSecureContext);
-
   function setStage(name) {
     root.querySelectorAll("[data-stage]").forEach((s) => (s.hidden = s.dataset.stage !== name));
     root.querySelectorAll("[data-on]").forEach((b) => (b.hidden = b.dataset.on !== name));
     $("#scanner-title").textContent = name === "camera" ? "Point the camera at the page" : "Adjust the crop";
     hint.textContent =
       name === "camera"
-        ? "Fill the frame with the invoice, keep it flat and well lit."
+        ? "Fill the frame with the document, keep it flat and well lit."
         : "Drag the corners or edges to trim the background.";
   }
 
@@ -86,14 +84,32 @@
 
   async function startCamera() {
     setStage("camera");
+    $("[data-act=shoot]").hidden = false;
+    hint.textContent = 'Starting camera… Click "Allow" if prompted, or choose "Use photo".';
+    if (!navigator.mediaDevices?.getUserMedia) {
+      $("[data-act=shoot]").hidden = true;
+      hint.textContent = window.isSecureContext
+        ? 'Camera API is unavailable in this browser. Click "Use photo" to choose or take a picture.'
+        : 'Live camera requires HTTPS or localhost. Click "Use photo" to pick a photo instead.';
+      return;
+    }
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } },
-        audio: false,
-      });
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
       video.srcObject = stream;
+      video.addEventListener("loadeddata", () => {
+        if (stream) hint.textContent = "Fill the frame with the document, keep it flat and well lit.";
+      }, { once: true });
+      await video.play().catch(() => {});
     } catch (err) {
-      hint.textContent = `Camera unavailable (${err.name || err.message}). Use "Use photo" to take or pick one instead.`;
+      $("[data-act=shoot]").hidden = true;
+      hint.textContent = `Camera unavailable (${err.name || err.message}). Click "Use photo" to pick a photo instead.`;
     }
   }
 
@@ -101,15 +117,7 @@
     if (resolveFn) return Promise.resolve(null);
     const p = new Promise((r) => (resolveFn = r));
     root.hidden = false;
-    if (canStream()) {
-      startCamera();
-    } else {
-      // No live preview here (e.g. http on a phone): open the native camera directly.
-      setStage("camera");
-      $("[data-act=shoot]").hidden = true;
-      hint.textContent = "Opening your camera… If nothing happens, tap \"Use photo\".";
-      picker.click();
-    }
+    startCamera();
     return p;
   }
 
@@ -400,7 +408,7 @@
     else if (act === "pick") picker.click();
     else if (act === "retake") {
       source = null;
-      canStream() ? startCamera() : (setStage("camera"), ($("[data-act=shoot]").hidden = true), picker.click());
+      startCamera();
     } else if (act === "rotate") rotate();
     else if (act === "enhance") {
       enhance = !enhance;

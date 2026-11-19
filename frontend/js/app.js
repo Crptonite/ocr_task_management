@@ -133,21 +133,126 @@ sidebarToggleBtn?.addEventListener("click", () => {
 });
 sidebarScrim?.addEventListener("click", closeMobileSidebar);
 
-function triggerSearchAction() {
-  const currentTab = $(".nav nav a.active")?.dataset.tab || "orders";
-  if (currentTab === "orders") {
-    $("#intake-raw-text")?.focus();
-    $("#intake-raw-text")?.scrollIntoView({ behavior: "smooth", block: "center" });
+const NAV_FEATURES = [
+  { label: "PO Intake & Validation", group: "Orders (6a)", href: "#orders/intake", section: "ord-intake", keys: "po purchase order intake validate validation sku typo email csv new blank scan camera upload" },
+  { label: "Order Queue", group: "Orders (6a)", href: "#orders/queue", section: "ord-queue", keys: "order queue pending approve reject list" },
+  { label: "SG–VN ERP Bridge", group: "Orders (6a)", href: "#orders/bridge", section: "ord-bridge", keys: "wesley erp bridge vietnam sg transfer price masking navision export lead time" },
+  { label: "Review Queue", group: "Invoices (6b)", href: "#invoices/queue", section: "inv-queue", keys: "invoice review queue supplier customer approve" },
+  { label: "3-Way Match", group: "Invoices (6b)", href: "#invoices/three-way-match", section: "inv-3way", keys: "qizhi 3-way match three way receipt diff matrix discrepancy tasks audit approval" },
+  { label: "Purchase Orders", group: "Invoices (6b)", href: "#invoices/pos", section: "inv-pos", keys: "erp purchase orders po cards mock" },
+  { label: "Create Invoice", group: "Invoices (6b)", href: "#invoices/create", section: "inv-create", keys: "create invoice product generator pdf" },
+  { label: "Upload Invoice", group: "Invoices (6b)", href: "#invoices/upload", section: "inv-upload", keys: "upload invoice ocr scan camera pdf lucas" },
+  { label: "Invoice Generator Page", group: "Invoices (6b)", href: "invoice-generator.html", section: null, keys: "multi invoice generator studio standalone page" },
+  { label: "All Documents & CSV", group: "Documents", href: "#documents/all", section: "doc-all", keys: "all documents csv overview filter export" },
+  { label: "Projects Overview", group: "Projects", href: "#projects/list", section: "prj-list", keys: "projects overview em services" },
+  { label: "Task Board", group: "Projects", href: "#projects/board", section: "project-board", keys: "project task board kanban" },
+  { label: "Suggested Build Order", group: "Planning (6c)", href: "#planning/build", section: "pln-build", keys: "planning build order sequence priority" },
+  { label: "Material Requirements", group: "Planning (6c)", href: "#planning/materials", section: "pln-materials", keys: "material requirements mrp stock timber" },
+  { label: "Purchase Suggestions", group: "Planning (6c)", href: "#planning/purchases", section: "pln-purchases", keys: "purchase suggestions shortage buy" },
+];
+
+const searchWrap = $("#nav-search-btn");
+const searchInput = $("#nav-search-input");
+const searchResultsEl = $("#nav-search-results");
+let searchMatches = [];
+let searchActiveIdx = 0;
+
+const normSearch = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+function scoreFeature(item, query) {
+  const q = normSearch(query);
+  if (!q) return 1;
+  const labelLow = normSearch(item.label);
+  const groupWord = normSearch(item.group).split(" ")[0];
+  const haystack = `${labelLow} ${normSearch(item.group)} ${normSearch(item.keys)}`;
+  if (labelLow === q) return 100;
+  if (labelLow.startsWith(q)) return 85;
+  if (groupWord === q) return 78;
+  if (labelLow.includes(q)) return 70;
+  const tokens = q.split(" ").filter(Boolean);
+  if (tokens.every((t) => haystack.includes(t))) {
+    return 50 + tokens.filter((t) => labelLow.includes(t)).length * 8;
+  }
+  const matched = tokens.filter((t) => haystack.includes(t)).length;
+  if (matched) return matched * 20;
+  // Subsequence fallback for short typos (e.g. "invoce" -> "invoices")
+  let qi = 0;
+  for (const ch of haystack) {
+    if (ch === q[qi]) qi++;
+    if (qi === q.length) return 10;
+  }
+  return 0;
+}
+
+function goToFeature(item) {
+  if (!item) return;
+  if (searchResultsEl) searchResultsEl.hidden = true;
+  if (searchInput) {
+    searchInput.value = "";
+    searchInput.blur();
+  }
+  if (item.href.startsWith("#")) {
+    if (location.hash === item.href && item.section) focusSection(item.section);
+    else location.hash = item.href;
   } else {
-    location.hash = "#orders/intake";
-    setTimeout(() => $("#intake-raw-text")?.focus(), 150);
+    location.href = item.href;
   }
 }
-$("#nav-search-btn")?.addEventListener("click", triggerSearchAction);
+
+function renderSearchResults(query) {
+  if (!searchResultsEl) return;
+  searchMatches = NAV_FEATURES
+    .map((item) => ({ item, score: scoreFeature(item, query) }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 7)
+    .map((x) => x.item);
+  searchActiveIdx = 0;
+  searchResultsEl.innerHTML = searchMatches.length
+    ? searchMatches.map((m, i) => `<button type="button" class="nav-search-item${i === 0 ? " active" : ""}" role="option" data-idx="${i}">
+        <span>${esc(m.label)}</span><span class="nav-search-group">${esc(m.group)}</span></button>`).join("")
+    : `<div class="nav-search-empty">No matching feature. Try "PO", "ERP", "Review Queue", or "3-Way Match".</div>`;
+  searchResultsEl.hidden = false;
+}
+
+function setActiveSearchItem(idx) {
+  if (!searchResultsEl || !searchMatches.length) return;
+  searchActiveIdx = (idx + searchMatches.length) % searchMatches.length;
+  $$(".nav-search-item", searchResultsEl).forEach((btn, i) => btn.classList.toggle("active", i === searchActiveIdx));
+}
+
+searchWrap?.addEventListener("click", (e) => {
+  const itemBtn = e.target.closest(".nav-search-item");
+  if (itemBtn) return goToFeature(searchMatches[Number(itemBtn.dataset.idx)]);
+  searchInput?.focus();
+});
+searchInput?.addEventListener("focus", () => renderSearchResults(searchInput.value));
+searchInput?.addEventListener("input", () => renderSearchResults(searchInput.value));
+searchInput?.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    setActiveSearchItem(searchActiveIdx + 1);
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    setActiveSearchItem(searchActiveIdx - 1);
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (!searchMatches.length) renderSearchResults(searchInput.value);
+    goToFeature(searchMatches[searchActiveIdx]);
+  } else if (e.key === "Escape") {
+    if (searchResultsEl) searchResultsEl.hidden = true;
+    searchInput.blur();
+  }
+});
+document.addEventListener("click", (e) => {
+  if (searchWrap && !searchWrap.contains(e.target) && searchResultsEl) searchResultsEl.hidden = true;
+});
 window.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
     e.preventDefault();
-    triggerSearchAction();
+    searchInput?.focus();
+    searchInput?.select();
+    renderSearchResults(searchInput?.value || "");
   }
 });
 
@@ -220,9 +325,9 @@ const SECTION_ROUTES = {
   "orders/intake": { tab: "orders", section: "ord-intake" },
   "orders/queue": { tab: "orders", section: "ord-queue" },
   "orders/bridge": { tab: "orders", section: "ord-bridge" },
-  "orders/upload": { tab: "orders", section: "ord-upload" },
   "documents/all": { tab: "documents", section: "doc-all" },
   "invoices/queue": { tab: "invoices", section: "inv-queue" },
+  "invoices/three-way-match": { tab: "invoices", section: "inv-3way" },
   "invoices/pos": { tab: "invoices", section: "inv-pos" },
   "invoices/create": { tab: "invoices", section: "inv-create" },
   "invoices/upload": { tab: "invoices", section: "inv-upload" },
@@ -244,7 +349,7 @@ const loaded = {};
 function parseRoute() {
   const raw = location.hash.slice(1);
   if (SECTION_ROUTES[raw]) return SECTION_ROUTES[raw];
-  const tab = HERO[raw] ? raw : "documents";
+  const tab = HERO[raw] ? raw : "orders";
   return { tab, section: DEFAULT_SECTION[tab] || null };
 }
 
@@ -358,11 +463,13 @@ function renderInvoiceDetail(inv) {
     ${flags}
     <table><thead><tr><th>SKU</th><th class="num">Qty</th><th class="num">Unit</th></tr></thead><tbody>${lines}</tbody></table>
     <p style="margin-top:1rem" class="num"><strong>${money(inv.total, inv.currency)}</strong></p>
-    ${
-      inv.file_path
-        ? `<button type="button" class="btn btn-outline" style="margin-top:1rem" id="open-invoice-pdf">Open PDF</button>`
-        : ""
-    }`;
+    <div class="actions" style="margin-top:1rem">
+      <button type="button" class="btn btn-accent btn-sm" id="open-in-3way">Open in 3-Way Match →</button>
+      ${inv.file_path ? `<button type="button" class="btn btn-outline" id="open-invoice-pdf">Open PDF</button>` : ""}
+    </div>`;
+  $("#open-in-3way")?.addEventListener("click", () => {
+    if (typeof openInThreeWayMatch === "function") openInThreeWayMatch(inv.invoice_number);
+  });
   $("#open-invoice-pdf")?.addEventListener("click", () =>
     confirmAndDownload(`${API}/api/invoices/${encodeURIComponent(inv.invoice_number)}/file`, `${inv.invoice_number}.pdf`)
   );
@@ -562,6 +669,7 @@ async function loadInvoices() {
     $("#pi-variant").value = chosen.variant;
     updateProductHint(false);
   }
+  if (typeof refreshThreeWayQueue === "function") refreshThreeWayQueue().catch(() => {});
 }
 
 // Refresh the queue and open the uploaded invoice, or show the draft if fields were missing.
@@ -680,10 +788,22 @@ function renderOrderDetail(o) {
         <label class="edit-field">Reason for rejection<textarea id="reject-reason" rows="2" maxlength="500"></textarea></label>
         <div class="actions"><button class="btn btn-danger btn-sm" id="reject-confirm">Confirm rejection</button>
           <button class="btn btn-outline btn-sm" id="reject-cancel">Cancel</button></div>
-      </div>` : orderLocked(o) ? `<p class="muted" style="margin-top:1rem">${esc(orderLocked(o))}</p>`
-      : `<div class="actions"><button class="btn btn-outline" id="edit-order">Edit order / status</button></div>`}
+      </div>` : orderLocked(o) ? `<p class="muted" style="margin-top:1rem">${esc(orderLocked(o))}</p>${o.status === "approved" || o.status === "exported" ? `<div class="actions"><button type="button" class="btn btn-accent btn-sm" id="open-in-bridge">Open in SG–VN ERP Bridge →</button>${o.invoice ? `<button type="button" class="btn btn-outline btn-sm" id="open-in-inv-queue">Open in Invoice Queue →</button>` : ""}</div>` : ""}`
+      : `<div class="actions"><button class="btn btn-outline" id="edit-order">Edit order / status</button>${o.status === "approved" ? `<button type="button" class="btn btn-accent btn-sm" id="open-in-bridge">Open in SG–VN ERP Bridge →</button>${o.invoice ? `<button type="button" class="btn btn-outline btn-sm" id="open-in-inv-queue">Open in Invoice Queue →</button>` : ""}` : ""}</div>`}
     ${o.updated_at ? `<p class="muted" style="margin-top:.6rem;font-size:.8rem">Last edited by ${esc(o.updated_by)} · ${esc(fmtTime(o.updated_at))}</p>` : ""}`;
   $("#edit-order")?.addEventListener("click", () => renderOrderForm(o));
+  $("#open-in-bridge")?.addEventListener("click", async () => {
+    if (typeof selectedBridgeId !== "undefined") selectedBridgeId = o.id;
+    if (typeof loadErpBridge === "function") await loadErpBridge().catch(() => {});
+    if (location.hash === "#orders/bridge") $("#ord-bridge")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    else location.hash = "#orders/bridge";
+  });
+  $("#open-in-inv-queue")?.addEventListener("click", () => {
+    selectedInvoiceId = o.id;
+    if ($("#invoice-rows")) renderInvoiceQueue();
+    if (location.hash === "#invoices/queue") $("#inv-queue")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    else location.hash = "#invoices/queue";
+  });
   $("#approve-order")?.addEventListener("click", async () => {
     const by = await adminName();
     if (!by) return;
@@ -697,6 +817,7 @@ function renderOrderDetail(o) {
     try {
       await api(`/api/orders/${o.id}/approve`, { method: "POST", body: JSON.stringify({ approved_by: by }) });
       selectedInvoiceId = o.id;
+      if (typeof selectedBridgeId !== "undefined") selectedBridgeId = o.id;
       await loadOrders();
     } catch (err) {
       await noticeModal("Approval failed", err.message);
@@ -923,17 +1044,6 @@ function renderOrderForm(o = null) {
   form.elements.order_number.focus();
 }
 
-async function afterOrderUpload(result) {
-  const out = $('[data-upload="/api/orders/upload"]')?.nextElementSibling;
-  selectedOrderId = result.order.id;
-  await loadOrders();
-  const v = result.order.validation || { status: "", issues: [] };
-  if (out) {
-    out.textContent = `${result.order.id} read from ${result.draft?.source_file || "document"} and added to the order queue (${label(v.status)}${v.issues?.length ? `: ${v.issues.join("; ")}` : ""}). Use Edit to correct it.`;
-  }
-  $("#order-detail")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
 function renderOrders() {
   const count = (fn) => orders.filter(fn).length;
   setStat("ord-total", orders.length);
@@ -991,6 +1101,7 @@ async function loadOrders() {
   renderOrders();
   renderInvoiceQueue();
   if (typeof loadErpBridge === "function") loadErpBridge().catch(() => {});
+  if (typeof refreshThreeWayQueue === "function") refreshThreeWayQueue().catch(() => {});
 }
 
 /* ---------- Spectra: review invoice queue ---------- */
@@ -1033,7 +1144,10 @@ function renderGeneratedInvoice(e) {
       <td class="num">${i.quantity}</td><td class="num">${Number(i.unit_price).toFixed(2)}</td><td class="num">${Number(i.amount).toFixed(2)}</td></tr>`).join("")}
     </tbody></table>
     ${totalsHtml(inv, inv.currency, inv.tax_rate)}
-    <div class="actions"><a class="btn btn-outline" id="iq-download" href="${API}/api/invoice-queue/${e.order_id}/invoice.pdf">Download PDF</a></div>`;
+    <div class="actions"><button type="button" class="btn btn-accent btn-sm" id="iq-open-3way">Open in 3-Way Match →</button><a class="btn btn-outline" id="iq-download" href="${API}/api/invoice-queue/${e.order_id}/invoice.pdf">Download PDF</a></div>`;
+  $("#iq-open-3way")?.addEventListener("click", () => {
+    if (typeof openInThreeWayMatch === "function") openInThreeWayMatch(inv.invoice_number);
+  });
   $("#iq-download").addEventListener("click", (ev) => {
     ev.preventDefault();
     confirmAndDownload(ev.currentTarget.href, `invoice ${inv.invoice_number}`);
@@ -1165,13 +1279,6 @@ function renderInvoiceEditor(e) {
   });
   recalc();
 }
-
-$("#add-order")?.addEventListener("click", () => {
-  selectedOrderId = null;
-  $(".active", $("#order-rows"))?.classList.remove("active");
-  renderOrderForm();
-  $("#order-detail").scrollIntoView({ behavior: "smooth", block: "nearest" });
-});
 
 $("#export-orders")?.addEventListener("click", async (e) => {
   e.preventDefault();
@@ -1401,8 +1508,6 @@ $$("form[data-upload]").forEach((form) => {
 
       if ("invoice" in result) {
         await afterInvoiceUpload(result);
-      } else if (result.order) {
-        await afterOrderUpload(result);
       } else {
         out.textContent =
           (result.draft?.note || "Document uploaded, but extraction was incomplete.") +

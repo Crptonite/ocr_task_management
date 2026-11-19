@@ -23,6 +23,13 @@ let intakeValidateSeq = 0;
     [data-theme="dark"] .email-fields textarea, [data-theme="dark"] .email-fields input,
     [data-theme="dark"] .intake-text-label textarea { background: transparent; color: inherit; color-scheme: dark; }
     @media (max-width: 1120px) { .intake-grid { grid-template-columns: minmax(0, 1fr); } }
+    .nav-search-trigger { position: relative; }
+    #nav-search-input { flex: 1; min-width: 0; background: transparent !important; border: 0 !important; padding: .15rem 0 !important; box-shadow: none !important; color: var(--text); outline: none; }
+    .nav-search-results[hidden] { display: none !important; }
+    .nav-search-results { position: absolute; top: calc(100% + 6px); left: 0; min-width: 100%; width: max(100%, 340px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 12px 32px rgba(0,0,0,.28); padding: .35rem; display: grid; gap: .15rem; max-height: 320px; overflow-y: auto; z-index: 60; }
+    .nav-search-item { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: .75rem; padding: .5rem .65rem; border: 0; border-radius: 5px; background: transparent; color: var(--text); font: inherit; font-size: .8rem; text-align: left; cursor: pointer; }
+    .nav-search-item:hover, .nav-search-item.active { background: var(--accent-soft); color: var(--accent); }
+    .nav-search-group { font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); white-space: nowrap; }
   `;
   document.head.appendChild(style);
 
@@ -41,7 +48,10 @@ let intakeValidateSeq = 0;
         if (!el.id && !el.name) el.name = el.getAttribute("aria-label")?.toLowerCase().replace(/\W+/g, "-") || `po-field-${i}`;
       }));
   };
-  document.addEventListener("DOMContentLoaded", nameControls);
+  document.addEventListener("DOMContentLoaded", () => {
+    nameControls();
+    if (typeof wireIntakeEvents === "function") wireIntakeEvents();
+  });
   window.addEventListener("load", nameControls);
 })();
 
@@ -268,7 +278,16 @@ function wireIntakeEvents() {
     e.stopPropagation();
     fileIn.click();
   });
-  dz.addEventListener("click", () => fileIn.click());
+  $("#intake-scan-btn")?.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!window.Scanner) return;
+    const file = await window.Scanner.open();
+    if (file) pickFile(file);
+  });
+  dz.addEventListener("click", (e) => {
+    if (e.target.closest("#intake-scan-btn, #intake-browse-btn, button")) return;
+    fileIn.click();
+  });
   dz.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -436,6 +455,8 @@ function wireIntakeEvents() {
       selectedOrderId = out.order.id;
       await loadOrders();
       await noticeModal("PO Queued", `${out.order.order_number} has been validated and added to the Order Queue (${out.order.id}).`, "Sent to Queue");
+      if (location.hash === "#orders/queue") $("#ord-queue")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      else location.hash = "#orders/queue";
     } catch (err) {
       await noticeModal("Cannot Queue PO", err.message, "Validation Error");
     } finally {

@@ -17,10 +17,12 @@ from app.services import autofill, documents as documents_service, supabase_stor
 from app.routers import documents, invoice_generator, invoice_queue, invoices, orders, planning, projects
 from aeric import router as po_intake
 from wesley import router as erp_bridge
+from qizhi import router as three_way_match
 
 FRONTEND_DIR = ROOT_DIR / "frontend"
 AERIC_DIR = ROOT_DIR / "aeric"
 WESLEY_DIR = ROOT_DIR / "wesley"
+QIZHI_DIR = ROOT_DIR / "qizhi"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -69,6 +71,7 @@ app.include_router(invoice_generator.router)  # standalone invoice generator
 app.include_router(orders.router)    # Spectra: order automation
 app.include_router(po_intake.router)  # Koda 6a: PO intake & validation
 app.include_router(erp_bridge.router)  # Koda 6a Part 2: SG-VN ERP bridge & price masking
+app.include_router(three_way_match.router)  # Koda 6b Part 2: 3-way match, tasks & approval
 app.include_router(invoice_queue.router)  # Spectra: review invoice queue for approved orders
 app.include_router(projects.router)  # EM Services: project tracker
 app.include_router(planning.router)  # Koda: material requirements and production priorities
@@ -106,6 +109,10 @@ if AERIC_DIR.exists():
 # Mount Wesley's 6a Part 2 ERP Bridge frontend script before the catch-all "/" static mount.
 if WESLEY_DIR.exists():
     app.mount("/wesley", StaticFiles(directory=WESLEY_DIR), name="wesley")
+
+# Mount Qizhi's 6b Part 2 3-Way Match frontend script before the catch-all "/" static mount.
+if QIZHI_DIR.exists():
+    app.mount("/qizhi", StaticFiles(directory=QIZHI_DIR), name="qizhi")
 
 # Serve the static frontend at / (keep this last so /api routes win).
 if FRONTEND_DIR.exists():
