@@ -1,46 +1,43 @@
-# Koda Invoice Check
+# Koda AI Operations Workspace
 
-AI-assisted invoice checking for **Koda Ltd** (Problem Statement 6b, SCCCI × NYP AI Innovation Challenge, IT2134).
+Integrated AI-assisted **Purchase Order (PO) & Invoice Operations** platform for **Koda Ltd** (SCCCI × NYP AI Innovation Challenge, IT2134 — Problem Statements **6a** & **6b**, plus **6c** Planning & Project Tracking).
 
-Staff upload a supplier invoice → the system extracts the fields → matches them against the purchase order → flags price, quantity, tax and duplicate issues → staff approve and export for Dynamics.
+## End-to-End Workflow
 
-The same workspace also has tabs for two related problem statements:
+1. **6a Part 1 — Customer PO Intake & Validation (`aeric/`, `#orders/intake`):** Upload PDF, CSV, text, pasted email, or camera scan (`Scanner.open()`). Rules-first parser (`0` AI tokens) + optional Tesseract OCR + OpenAI Vision fallback extracts fields, catches 1-character SKU typos via Levenshtein fuzzy matching, drafts buyer clarification emails, and queues verified POs.
+2. **Order Queue (`backend/app/routers/orders.py`, `#orders/queue`):** Staff inspect, edit, approve, or reject queued orders.
+3. **6a Part 2 — SG–VN ERP Bridge (`wesley/`, `#orders/bridge`):** Converts approved Singapore HQ orders into Vietnam Factory SOs with strict SG vs. Vietnam customer contract price masking, inline transfer-price mapping, lead-time risk advisories, and Dual Navision 2013 CSV/PDF exports.
+4. **6b Part 1 — Invoice OCR, Review Queue & Generators (`backend/app/`, `#invoices/queue`):** Extracts uploaded supplier invoices (PDF text/regex + OpenAI Vision fallback), auto-fills partial drafts, manages generated invoices for approved orders, and provides test PDF/receipt designers (`/invoice-generator`, `/receipt-generator`).
+5. **6b Part 2 — 3-Way Match & Approval (`qizhi/`, `#invoices/three-way-match`):** Compares Invoice vs. PO vs. hard-copy POS receipt (wrapped lines, decimal commas, derived unit-price rounding tolerance), renders a side-by-side diff matrix, generates departmental tasks (optional Claude wording via `ANTHROPIC_API_KEY`), enforces department-head segregation-of-duties approval, and verifies a SHA-256 hash-chained audit trail.
 
-- **Orders (Spectra Innovations):** extract purchase / sales orders, validate line items against the catalogue, approve, export CSV for ERP entry.
-- **Projects (EM Services):** projects broken into tasks with owners and deadlines, a task board, filters, overdue summary and AI task suggestions.
-- **Planning (Koda):** customer orders exploded into materials, checked against stock and inbound deliveries, with shortage alerts, a suggested build order and purchase suggestions (`GET /api/planning`).
+## Team & Project Structure
 
-Customer PO upload (`POST /api/orders/upload`) reads customer, product lines, quantities and delivery date from the PDF text layer and validates them. `GET /api/orders/{id}/koda-entry` returns the normalised record for Koda entry.
-
-## Team
-
-| Member | Role | Owns |
+| Member | Scope | Package / Directory |
 | --- | --- | --- |
-| Aeric (lead) | Backend & architecture | `backend/app/` (API, matching, data) |
-| Qizhi | Frontend | `frontend/` |
-| Lucas | OCR & AI | `backend/app/ai/` |
-| Wesley | Testing & QA | `backend/tests/`, `.github/workflows/` |
+| **Aeric (Lead)** | 6a Part 1 — PO Intake, Fuzzy SKU Matching & Order Queue | `aeric/` |
+| **Wesley** | 6a Part 2 — SG–VN ERP Bridge, Price Masking & Navision 2013 Export | `wesley/` |
+| **Lucas** | 6b Part 1 — OCR / OpenAI Extraction, Scanner, Review Queue, DB & Generators | `backend/app/`, `frontend/` |
+| **Qizhi** | 6b Part 2 — 3-Way Match, Receipt Parser, Tasks, Approval & Audit Chain | `qizhi/` |
 
-## Project structure
-
-```
+```text
+aeric/            6a Part 1 router, parser, fuzzy matcher, intake JS & pytest tests
+wesley/           6a Part 2 router, transfer pricing, Navision CSV/PDF exporter & tests
+qizhi/            6b Part 2 router, 3-way matcher, receipt parser, store, UI JS & tests
 backend/
   app/
-    main.py            FastAPI app + serves the frontend
-    routers/           API per tab: invoices, orders, projects
-    services/          rules: invoice matching, order validation, project progress
-    ai/                extraction (OCR / LLM) and task suggestions
-    data/              mock data (ERP, orders, projects), seeds an empty database
-    models.py          SQLAlchemy models (one table per collection)
-    database.py        loads / saves the store: SQLite or Supabase Postgres
-    store.py           in-memory working copy the routers edit
-  tests/               pytest
-frontend/              static HTML / CSS / JS (light + dark mode)
-docs/                  architecture, meeting notes, client Q&A
-legacy/opspilot/       earlier Next.js prototype, kept for reference
+    main.py       Unified FastAPI entrypoint (mounts /api/*, /aeric, /wesley, /qizhi, /)
+    routers/      Core routers (documents, orders, invoices, invoice_queue, invoice_generator, projects, planning)
+    services/     Validation, matching, autofill, PDF generation, Supabase & CSV sync
+    ai/           pypdf/regex extractors and OpenAI structured-output Vision fallback
+    models.py     SQLAlchemy models (SQLite or Supabase Postgres)
+    database.py   Startup load + request-level persistence
+  tests/          Core backend pytest suite
+frontend/         Hash-routed vanilla HTML/CSS/JS SPA (light & dark mode, Montserrat)
+docs/             architecture.md (flow, ERD, API), plans/, meetings/, distinction-checklist.md
+vercel.json       Copies feature JS slices into frontend/ for static Vercel builds
 ```
 
-## Run it
+## Setup & Local Run
 
 ```bash
 cd backend
@@ -50,20 +47,38 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Open http://localhost:8000 (frontend) or http://localhost:8000/docs (API docs).
+Open `http://127.0.0.1:8000` (app) or `http://127.0.0.1:8000/docs` (OpenAPI docs).
 
-### Database
+### Environment Variables (`backend/.env.example`)
 
-Data is saved to SQLite at `backend/koda.db` by default (created and seeded with the mock data on
-first start; delete the file to reset). To use Supabase Postgres instead, copy `backend/.env.example`
-to `backend/.env` and set `DATABASE_URL` to the project's connection string (Project Settings >
-Database > Connection string, **Session pooler**). Tables are created on startup in a `workspace`
-schema, which Supabase's public REST API does not expose. `DATABASE_URL=off` keeps everything in
-memory. `GET /api/health` reports which one is in use.
+Copy `backend/.env.example` to `backend/.env` as needed (everything is optional; the app starts cleanly with defaults):
 
-Run tests: `cd backend && pytest`
+- `DATABASE_URL` — Unset = local SQLite (`backend/koda.db`), `off` = in-memory only, or a Supabase Postgres Session Pooler URL (`workspace` schema).
+- `OPENAI_API_KEY` / `OPENAI_MODEL` — Enables OpenAI Vision/text fallback for scanned photos and unfamiliar PO/invoice layouts.
+- `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` — Optional Supabase Storage backup for uploaded invoice PDFs.
+- `ANTHROPIC_API_KEY` — Optional Claude wording refinement for 3-way match discrepancy tasks.
+- `TESSERACT_CMD` — Optional path to local Tesseract binary for scanned receipt/PO OCR (`tesseract` + `poppler` for scanned PDFs).
 
-## Workflow
+## Verification
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for branches, commits and pull requests.
+```bash
+cd backend
+.\.venv\Scripts\pytest.exe -q
+```
 
+Syntax check frontend JS modules:
+
+```bash
+node --check frontend/js/app.js
+node --check frontend/js/scanner.js
+node --check aeric/po_intake.js
+node --check wesley/erp_bridge.js
+node --check qizhi/three_way_match.js
+```
+
+## Cloud Deployment
+
+- **Frontend (Vercel):** Deployed from `frontend/` using `vercel.json` (`buildCommand` copies `aeric/po_intake.js`, `wesley/erp_bridge.js`, and `qizhi/three_way_match.js` into `frontend/`).
+- **Backend (FastAPI host):** Run `uvicorn app.main:app --host 0.0.0.0 --port $PORT` from `backend/` (with `PYTHONPATH=.:..` or repo root on path so `aeric`, `wesley`, and `qizhi` resolve). When frontend and backend are on separate origins, point the frontend to the backend via `localStorage.setItem("koda-api", "https://<your-backend-url>")`.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for Git workflow and [docs/architecture.md](docs/architecture.md) for the ERD and API reference.
