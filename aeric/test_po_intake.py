@@ -194,3 +194,47 @@ def test_incomplete_sku_row_is_preserved_and_exact_sku_is_canonicalized():
     assert res.status_code == 200
     assert res.json()["po"]["lines"][0]["sku"] == "KD-CH-2047"
     assert res.json()["status"] == "ready"
+
+
+def test_camera_scan_image_uses_ocr_or_ai_cleanly(monkeypatch):
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (80, 80), "white").save(buf, format="JPEG")
+    jpg = buf.getvalue()
+
+    # Path A: local Tesseract OCR extracts a clean PO photo with 0 AI tokens
+    store.reset()
+    monkeypatch.setattr(po_parser, "_try_ocr_image", lambda _b: SAMPLES["clean"]["text"])
+    r_ocr = client.post("/api/po-intake", files={"file": ("scan-note.jpg", jpg, "image/jpeg")})
+    assert r_ocr.status_code == 200
+    assert r_ocr.json()["meta"]["method"] == "ocr"
+    assert r_ocr.json()["meta"]["ai_used"] is False
+    assert r_ocr.json()["meta"]["tokens"] == 0
+    assert r_ocr.json()["status"] == "ready"
+
+    # Path B: handwritten/unreadable photo falls back to OpenAI Vision when key is set
+    monkeypatch.setattr(po_parser, "_try_ocr_image", lambda _b: None)
+    monkeypatch.setattr(llm, "api_key", lambda: "test-key")
+    monkeypatch.setattr(
+        po_parser,
+        "_ai_read",
+        lambda filename, content, text: {
+            "tokens": 240,
+            "po": {
+                "po_number": "SCAN-101",
+                "buyer": "Pottery Barn Inc.",
+                "buyer_email": "sourcing@potterybarn.example",
+                "port": "Los Angeles, USA",
+                "order_date": "2026-11-12",
+                "delivery_date": "2027-02-01",
+                "currency": "USD",
+                "lines": [{"sku": "KD-CH-2047", "description": "Ashby oak dining chair", "quantity": 10, "unit_price": 145.0, "amount": 1450.0}],
+            },
+        },
+    )
+    r_ai = client.post("/api/po-intake", files={"file": ("handwritten-note.jpg", jpg, "image/jpeg")})
+    assert r_ai.status_code == 200
+    assert r_ai.json()["meta"]["method"] == "ai"
+    assert r_ai.json()["meta"]["ai_used"] is True
+    assert r_ai.json()["status"] == "ready"

@@ -245,9 +245,29 @@ def _needs_ai(po: dict) -> bool:
     return not po["lines"] or sum(1 for k in HEADER_FIELDS if po.get(k)) < 2
 
 
+def _try_ocr_image(content: bytes) -> str | None:
+    """Optional local Tesseract OCR for photographed/scanned POs before calling OpenAI Vision."""
+    try:
+        import os
+        import pytesseract
+        from PIL import Image, ImageOps
+    except ImportError:
+        return None
+    if os.getenv("TESSERACT_CMD"):
+        pytesseract.pytesseract.tesseract_cmd = os.environ["TESSERACT_CMD"]
+    try:
+        img = ImageOps.grayscale(Image.open(io.BytesIO(content)).convert("RGB"))
+        if img.width < 1000:
+            img = img.resize((1000, int(img.height * 1000 / img.width)))
+        text = pytesseract.image_to_string(ImageOps.autocontrast(img), config="--psm 6")
+        return text.strip() or None
+    except Exception:
+        return None
+
+
 def parse_po(filename: str, content: bytes | None = None, text: str | None = None) -> tuple[dict, dict]:
     """Returns (po, meta). meta explains which path ran so the UI can show it."""
-    method, text_in = "text", text
+    method, text_in, ocr_used = "text", text, False
     if content is not None:
         if content.startswith(b"%PDF"):
             text_in, method = pdf_text(content), "pdf-text"
@@ -255,36 +275,41 @@ def parse_po(filename: str, content: bytes | None = None, text: str | None = Non
             text_in = content.decode("utf-8-sig", errors="replace")
             method = "text"
         else:
-            text_in, method = None, "image"
+            method = "image"
+            text_in = _try_ocr_image(content)
+            ocr_used = bool(text_in and text_in.strip())
 
     po = empty_po()
+    input_kind = method
     if text_in and text_in.strip():
         if looks_like_csv(text_in):
-            po, method = parse_csv(text_in), "csv"
+            po = parse_csv(text_in)
+            if method != "image":
+                input_kind = "csv"
         else:
             po = parse_text(text_in)
     rules_found = bool(po["lines"]) or any(po.get(k) for k in HEADER_FIELDS)
 
-    meta = {"method": "rules", "input": method, "ai_used": False, "tokens": 0, "note": None}
-    if method == "image" or _needs_ai(po):
+    meta = {"method": "ocr" if ocr_used else "rules", "input": input_kind, "ai_used": False, "tokens": 0, "note": None}
+    if (method == "image" and not ocr_used) or _needs_ai(po):
         if llm.llm_enabled():
             try:
                 read = _ai_read(filename, content if method in ("image", "pdf-text") else None,
                                 text_in if method != "image" else None)
                 ai_po = read["po"]
-                # Keep whatever the rules already read; the model fills only the gaps.
+                # Keep whatever the rules/OCR already read; the model fills only the gaps.
                 for key, value in ai_po.items():
                     if key == "lines":
                         if not po["lines"]:
                             po["lines"] = value
                     elif not po.get(key):
                         po[key] = value
-                meta.update(method="hybrid" if rules_found else "ai", ai_used=True,
+                meta.update(method="hybrid" if (rules_found or ocr_used) else "ai", ai_used=True,
                             tokens=read["tokens"] or max(1, len(text_in or "") // 4 + 400))
-            except Exception as exc:  # network, auth, quota: keep the rules result
-                meta["note"] = f"AI read failed ({type(exc).__name__}); showing what the rules found."
+            except Exception as exc:  # network, auth, quota: keep the rules/OCR result
+                meta["note"] = f"AI read failed ({type(exc).__name__}); showing what {'OCR' if ocr_used else 'the rules'} found."
         else:
-            meta["note"] = ("Scanned image: set OPENAI_API_KEY to read it, or paste the PO text."
+            meta["note"] = ("Scanned image: set OPENAI_API_KEY (or install Tesseract OCR) to read photos/notes automatically, or paste the PO text."
                             if method == "image" else
                             "Rules could not read every part of this PO and the AI parser is off (no OPENAI_API_KEY). "
                             "Fill the highlighted fields by hand.")
